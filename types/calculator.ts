@@ -12,6 +12,7 @@ export type CalculatorStep =
   | "campaign-details"
   | "performance"
   | "your-details"
+  | "confirmation"
   | "results";
 
 export type Currency = "EUR" | "USD" | "GBP" | "SEK";

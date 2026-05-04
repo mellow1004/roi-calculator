@@ -11,6 +11,7 @@
 
 import { useEffect } from "react";
 import StepCampaignDetails from "@/components/calculator/StepCampaignDetails";
+import StepConfirmation from "@/components/calculator/StepConfirmation";
 import StepIndicator from "@/components/calculator/StepIndicator";
 import StepPerformance from "@/components/calculator/StepPerformance";
 import StepResults from "@/components/calculator/StepResults";
@@ -32,6 +33,8 @@ function stepContent(step: CalculatorStep): React.JSX.Element {
       return <StepPerformance />;
     case "your-details":
       return <StepYourDetails />;
+    case "confirmation":
+      return <StepConfirmation />;
     case "results":
       return <StepResults />;
     default:

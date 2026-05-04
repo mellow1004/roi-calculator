@@ -1,12 +1,15 @@
 import type { CalculatorStep } from "@/types/calculator";
 
+/** Steps shown in the progress UI (excludes interstitial `confirmation`). */
+type IndicatorStepKey = Exclude<CalculatorStep, "confirmation">;
+
 interface StepIndicatorProps {
   currentStep: CalculatorStep;
   selectedServices: string[];
 }
 
 interface StepConfig {
-  key: CalculatorStep;
+  key: IndicatorStepKey;
   label: string;
 }
 
@@ -18,11 +21,20 @@ const steps: StepConfig[] = [
   { key: "results", label: "Results" },
 ];
 
+/** Map runtime step to the visible indicator step (confirmation sits under "Your details"). */
+function stepForIndicator(currentStep: CalculatorStep): IndicatorStepKey {
+  if (currentStep === "confirmation") {
+    return "your-details";
+  }
+  return currentStep;
+}
+
 export default function StepIndicator({
   currentStep,
   selectedServices,
 }: StepIndicatorProps): React.JSX.Element {
-  const currentStepIndex = steps.findIndex((step) => step.key === currentStep);
+  const indicatorStep = stepForIndicator(currentStep);
+  const currentStepIndex = steps.findIndex((step) => step.key === indicatorStep);
   const hasGTME = selectedServices.includes("gtme");
   const hasOutbound = selectedServices.some((serviceId) => serviceId !== "gtme");
   const hasBothOutboundAndGTME = hasGTME && hasOutbound;
@@ -35,7 +47,7 @@ export default function StepIndicator({
     >
       <ol className="flex w-full items-start justify-between gap-2 md:gap-3">
         {steps.map((step, index) => {
-          const isCurrent = step.key === currentStep;
+          const isCurrent = step.key === indicatorStep;
           const isCompleted =
             currentStepIndex !== -1 && index < currentStepIndex && !isCurrent;
           const isUpcoming = currentStepIndex !== -1 && index > currentStepIndex;

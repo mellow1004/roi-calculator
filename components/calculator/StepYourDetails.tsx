@@ -90,7 +90,7 @@ export default function StepYourDetails(): React.JSX.Element {
         gdprConsent: leadDetails.gdprConsent,
       },
     });
-    dispatch({ type: "SET_STEP", payload: "results" });
+    dispatch({ type: "SET_STEP", payload: "confirmation" });
   };
 
   const inputBase =
