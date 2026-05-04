@@ -1,0 +1,17 @@
+export const blockedEmailDomains: string[] = [
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "icloud.com",
+  "proton.me",
+  "protonmail.com",
+  "live.com",
+  "msn.com",
+  "aol.com",
+  "ymail.com",
+  "mail.com",
+  "gmx.com",
+  "tutanota.com",
+  "fastmail.com",
+];
