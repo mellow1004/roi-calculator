@@ -1,9 +1,9 @@
 import type { GTMEInputs, OutboundInputs } from "@/types/calculator";
 
 export const defaultOutboundInputs: OutboundInputs = {
-  targetMeetingsPerMonth: 10,
+  targetMeetingsPerMonth: 12,
   closeRate: 15,
-  averageMRR: 2000,
+  averageMRR: 5000,
   clientLifetimeYears: 4,
   currency: "EUR",
   serviceModel: "retainer",

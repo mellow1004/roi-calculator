@@ -68,7 +68,9 @@ export default function StepCampaignDetailsOutbound({
 }: StepCampaignDetailsOutboundProps): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs } = state;
-  const [serviceModel, setServiceModel] = useState<OutboundServiceModel>("retainer");
+  const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
+    outboundInputs.serviceModel ?? "retainer"
+  );
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
   const results = calculateOutboundResults(outboundInputs, costPerMeeting);
   const roiLabel = getRoiLabel(results.roi);
@@ -120,12 +122,17 @@ export default function StepCampaignDetailsOutbound({
     const oldRate = exchangeRates[outboundInputs.currency];
     const newRate = exchangeRates[newCurrency];
     const factor = newRate / oldRate;
+    const newCostPerMeeting = getCostPerMeetingForCurrency(newCurrency);
+    const newMinimum = minimums[serviceModel][newCurrency];
+    const minMeetings = Math.ceil(newMinimum / newCostPerMeeting);
+    const nextMeetings = Math.max(outboundInputs.targetMeetingsPerMonth, minMeetings);
 
     dispatch({
       type: "UPDATE_OUTBOUND_INPUTS",
       payload: {
         currency: newCurrency,
         averageMRR: Math.round(outboundInputs.averageMRR * factor),
+        targetMeetingsPerMonth: nextMeetings,
       },
     });
   };
@@ -210,6 +217,10 @@ export default function StepCampaignDetailsOutbound({
               }
               className={inputClass}
             />
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+              Minimum {formatCurrency(currentMinimum, outboundInputs.currency)}{" "}
+              {serviceModel === "retainer" ? "/ month" : "total"}
+            </p>
           </div>
 
           <div>
