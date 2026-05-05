@@ -1,6 +1,6 @@
 import type { OutboundInputs, OutboundResults } from "@/types/calculator";
 
-const COST_PER_MEETING = 440;
+const COST_PER_MEETING = 600;
 const exchangeRates = {
   EUR: 1,
   USD: 1.08,
@@ -16,7 +16,7 @@ export function getCostPerMeetingForCurrency(currency: OutboundInputs["currency"
  * Calculates outbound performance metrics from user inputs.
  *
  * Formula steps:
- * 1) monthlySpend = targetMeetingsPerMonth * 440
+ * 1) monthlySpend = targetMeetingsPerMonth * costPerMeeting
  * 2) newClientsPerMonth = targetMeetingsPerMonth * (closeRate / 100)
  * 3) cac = monthlySpend / newClientsPerMonth
  * 4) arr = averageMRR * 12
@@ -51,17 +51,44 @@ export function calculateOutboundResults(
 /**
  * Buckets ROI multiplier into qualitative labels.
  */
-export function getRoiLabel(roi: number): "strong" | "good" | "low" | "negative" {
+export function getRoiLabel(
+  roi: number
+): "Strong" | "Good" | "Low" | "Break-even" | "Negative" {
+  if (roi >= 15) {
+    return "Strong";
+  }
   if (roi >= 10) {
-    return "strong";
+    return "Good";
   }
   if (roi >= 4) {
-    return "good";
+    return "Low";
   }
   if (roi >= 1) {
-    return "low";
+    return "Break-even";
   }
-  return "negative";
+  return "Negative";
+}
+
+/** Tailwind classes for the outbound ROI qualitative badge (matches `getRoiLabel`). */
+export function outboundRoiLabelBadgeClassName(
+  label: ReturnType<typeof getRoiLabel>
+): string {
+  switch (label) {
+    case "Strong":
+      return "bg-[#0F3D24] text-white";
+    case "Good":
+      return "bg-[#15803d] text-white";
+    case "Low":
+      return "bg-amber-300 text-neutral-900";
+    case "Break-even":
+      return "bg-orange-500 text-white";
+    case "Negative":
+      return "bg-red-600 text-white";
+    default: {
+      const _exhaustive: never = label;
+      return _exhaustive;
+    }
+  }
 }
 
 /**

@@ -16,7 +16,11 @@ import { InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import type { TooltipKey } from "@/constants/tooltips";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { getGTMERoiLabel } from "@/lib/formulas/gtme";
-import { getCashFlowWarning, getRoiLabel } from "@/lib/formulas/outbound";
+import {
+  getCashFlowWarning,
+  getRoiLabel,
+  outboundRoiLabelBadgeClassName,
+} from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, GTMEResults, OutboundResults } from "@/types/calculator";
 
@@ -419,7 +423,12 @@ export default function StepResults(): React.JSX.Element {
             <p className="font-display mt-6 text-[80px] font-normal leading-none tracking-tight text-white">
               {outboundResults.roi}x
             </p>
-            <p className="mt-6 inline-block rounded-full bg-white/15 px-3.5 py-1 text-sm font-medium capitalize text-white">
+            <p
+              className={[
+                "mt-6 inline-block rounded-full px-3.5 py-1 text-sm font-medium",
+                outboundRoiLabelBadgeClassName(getRoiLabel(outboundResults.roi)),
+              ].join(" ")}
+            >
               {getRoiLabel(outboundResults.roi)}
             </p>
           </div>

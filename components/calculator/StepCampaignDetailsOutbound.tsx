@@ -6,14 +6,15 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import {
   calculateOutboundResults,
   getCashFlowWarning,
-  getCostPerMeetingForCurrency,
   getRoiLabel,
+  outboundRoiLabelBadgeClassName,
 } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
 const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
+const baseCostPerMeeting = 600;
 const exchangeRates = {
   EUR: 1,
   USD: 1.08,
@@ -38,21 +39,6 @@ function currencySymbol(currency: Currency): string {
   }
 }
 
-function roiLabelStyles(label: ReturnType<typeof getRoiLabel>): string {
-  switch (label) {
-    case "strong":
-      return "bg-[var(--color-accent)] text-white";
-    case "good":
-      return "bg-[var(--color-accent-hover)] text-white";
-    case "low":
-      return "bg-[var(--color-yellow-subtle)] text-[var(--color-text-primary)]";
-    case "negative":
-      return "bg-[var(--color-red-subtle)] text-[var(--color-text-primary)]";
-    default:
-      return "bg-[var(--color-border)] text-[var(--color-text-primary)]";
-  }
-}
-
 function rangePctStyle(value: number, min: number, max: number): CSSProperties {
   const pct = max === min ? 0 : ((value - min) / (max - min)) * 100;
   return { "--range-pct": `${pct}%` } as CSSProperties;
@@ -71,7 +57,10 @@ export default function StepCampaignDetailsOutbound({
   const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
     outboundInputs.serviceModel ?? "retainer"
   );
-  const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
+  const costPerMeetingByCurrency = Object.fromEntries(
+    CURRENCIES.map((currency) => [currency, Math.round(baseCostPerMeeting * exchangeRates[currency])])
+  ) as Record<Currency, number>;
+  const costPerMeeting = costPerMeetingByCurrency[outboundInputs.currency];
   const results = calculateOutboundResults(outboundInputs, costPerMeeting);
   const roiLabel = getRoiLabel(results.roi);
   const cashWarning = getCashFlowWarning(
@@ -122,7 +111,7 @@ export default function StepCampaignDetailsOutbound({
     const oldRate = exchangeRates[outboundInputs.currency];
     const newRate = exchangeRates[newCurrency];
     const factor = newRate / oldRate;
-    const newCostPerMeeting = getCostPerMeetingForCurrency(newCurrency);
+    const newCostPerMeeting = costPerMeetingByCurrency[newCurrency];
     const newMinimum = minimums[serviceModel][newCurrency];
     const minMeetings = Math.ceil(newMinimum / newCostPerMeeting);
     const nextMeetings = Math.max(outboundInputs.targetMeetingsPerMonth, minMeetings);
@@ -385,8 +374,8 @@ export default function StepCampaignDetailsOutbound({
                 </span>
                 <span
                   className={[
-                    "rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
-                    roiLabelStyles(roiLabel),
+                    "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+                    outboundRoiLabelBadgeClassName(roiLabel),
                   ].join(" ")}
                 >
                   {roiLabel}
