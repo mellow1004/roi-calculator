@@ -15,7 +15,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { LabelWithTooltip } from "@/components/calculator/Tooltip";
 import { calculateGTMEResults, getGTMERoiLabel } from "@/lib/formulas/gtme";
-import { calculateOutboundResults } from "@/lib/formulas/outbound";
+import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 
@@ -119,7 +119,8 @@ function SliderRow({
 function OutboundConfirmationSummary(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs, outboundResults } = state;
-  const results = outboundResults ?? calculateOutboundResults(outboundInputs);
+  const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
+  const results = outboundResults ?? calculateOutboundResults(outboundInputs, costPerMeeting);
   const currency = outboundInputs.currency;
   const yearsWhole = Math.floor(outboundInputs.clientLifetimeYears);
   const monthsTotal = Math.round(outboundInputs.clientLifetimeYears * 12);

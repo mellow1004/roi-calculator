@@ -18,7 +18,7 @@ import StepResults from "@/components/calculator/StepResults";
 import StepSelectServices from "@/components/calculator/StepSelectServices";
 import StepYourDetails from "@/components/calculator/StepYourDetails";
 import { CalculatorProvider, useCalculator } from "@/lib/calculatorStore";
-import { calculateOutboundResults } from "@/lib/formulas/outbound";
+import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 import type { CalculatorStep } from "@/types";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
@@ -60,9 +60,10 @@ function CalculatorShell(): React.JSX.Element {
     if (state.outboundResults !== null) {
       return;
     }
+    const costPerMeeting = getCostPerMeetingForCurrency(state.outboundInputs.currency);
     dispatch({
       type: "SET_OUTBOUND_RESULTS",
-      payload: calculateOutboundResults(state.outboundInputs),
+      payload: calculateOutboundResults(state.outboundInputs, costPerMeeting),
     });
   }, [
     dispatch,

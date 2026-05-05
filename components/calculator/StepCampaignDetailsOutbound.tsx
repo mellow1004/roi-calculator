@@ -3,16 +3,25 @@
 import { useState, type CSSProperties } from "react";
 import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { calculateOutboundResults, getCashFlowWarning, getRoiLabel } from "@/lib/formulas/outbound";
+import {
+  calculateOutboundResults,
+  getCashFlowWarning,
+  getCostPerMeetingForCurrency,
+  getRoiLabel,
+} from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
 const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
-const minimums = {
-  retainer: { SEK: 60000, EUR: 5200, USD: 5600, GBP: 4400 },
-  campaign: { SEK: 85000, EUR: 7400, USD: 7900, GBP: 6200 },
+const exchangeRates = {
+  EUR: 1,
+  USD: 1.08,
+  GBP: 0.86,
+  SEK: 11.5,
 } as const;
+const BASE_RETAINER_MIN_EUR = 5200;
+const BASE_CAMPAIGN_MIN_EUR = 7400;
 
 function currencySymbol(currency: Currency): string {
   switch (currency) {
@@ -59,10 +68,9 @@ export default function StepCampaignDetailsOutbound({
 }: StepCampaignDetailsOutboundProps): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs } = state;
-  const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
-    outboundInputs.serviceModel ?? "retainer"
-  );
-  const results = calculateOutboundResults(outboundInputs);
+  const [serviceModel, setServiceModel] = useState<OutboundServiceModel>("retainer");
+  const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
+  const results = calculateOutboundResults(outboundInputs, costPerMeeting);
   const roiLabel = getRoiLabel(results.roi);
   const cashWarning = getCashFlowWarning(
     results.cashFlowYear1Positive,
@@ -73,6 +81,20 @@ export default function StepCampaignDetailsOutbound({
   const sym = currencySymbol(outboundInputs.currency);
   const yearsWhole = Math.floor(outboundInputs.clientLifetimeYears);
   const monthsTotal = Math.round(outboundInputs.clientLifetimeYears * 12);
+  const minimums = {
+    retainer: Object.fromEntries(
+      CURRENCIES.map((currency) => [
+        currency,
+        Math.round(BASE_RETAINER_MIN_EUR * exchangeRates[currency]),
+      ])
+    ) as Record<Currency, number>,
+    campaign: Object.fromEntries(
+      CURRENCIES.map((currency) => [
+        currency,
+        Math.round(BASE_CAMPAIGN_MIN_EUR * exchangeRates[currency]),
+      ])
+    ) as Record<Currency, number>,
+  };
   const currentMinimum = minimums[serviceModel][outboundInputs.currency];
   const isBelowMinimum = results.monthlySpend < currentMinimum;
   const monthlyBudgetLabel =
@@ -90,6 +112,23 @@ export default function StepCampaignDetailsOutbound({
 
   const inputClass =
     "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out focus:border-[var(--color-accent)] focus:outline-none focus:ring-[3px] focus:ring-[rgba(26,92,56,0.12)]";
+
+  const handleCurrencyChange = (newCurrency: Currency): void => {
+    if (newCurrency === outboundInputs.currency) {
+      return;
+    }
+    const oldRate = exchangeRates[outboundInputs.currency];
+    const newRate = exchangeRates[newCurrency];
+    const factor = newRate / oldRate;
+
+    dispatch({
+      type: "UPDATE_OUTBOUND_INPUTS",
+      payload: {
+        currency: newCurrency,
+        averageMRR: Math.round(outboundInputs.averageMRR * factor),
+      },
+    });
+  };
 
   return (
     <section className="mx-auto w-full">
@@ -136,9 +175,7 @@ export default function StepCampaignDetailsOutbound({
                 <button
                   key={c}
                   type="button"
-                  onClick={() =>
-                    dispatch({ type: "UPDATE_OUTBOUND_INPUTS", payload: { currency: c } })
-                  }
+                  onClick={() => handleCurrencyChange(c)}
                   className={[
                     "rounded-full border px-4 py-2 text-sm font-semibold calculator-interactive",
                     outboundInputs.currency === c
@@ -373,7 +410,7 @@ export default function StepCampaignDetailsOutbound({
           <button
             type="button"
             onClick={() => {
-              const computed = calculateOutboundResults(outboundInputs);
+              const computed = calculateOutboundResults(outboundInputs, costPerMeeting);
               dispatch({ type: "SET_OUTBOUND_RESULTS", payload: computed });
               dispatch({ type: "SET_STEP", payload: "performance" });
             }}

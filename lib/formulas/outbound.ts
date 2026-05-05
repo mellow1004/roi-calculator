@@ -1,6 +1,16 @@
 import type { OutboundInputs, OutboundResults } from "@/types/calculator";
 
 const COST_PER_MEETING = 440;
+const exchangeRates = {
+  EUR: 1,
+  USD: 1.08,
+  GBP: 0.86,
+  SEK: 11.5,
+} as const;
+
+export function getCostPerMeetingForCurrency(currency: OutboundInputs["currency"]): number {
+  return Math.round(COST_PER_MEETING * exchangeRates[currency]);
+}
 
 /**
  * Calculates outbound performance metrics from user inputs.
@@ -14,8 +24,11 @@ const COST_PER_MEETING = 440;
  * 6) roi = ltv / cac (rounded to 1 decimal place)
  * 7) cashFlowYear1Positive = arr >= cac
  */
-export function calculateOutboundResults(inputs: OutboundInputs): OutboundResults {
-  const monthlySpend = inputs.targetMeetingsPerMonth * COST_PER_MEETING;
+export function calculateOutboundResults(
+  inputs: OutboundInputs,
+  costPerMeeting = COST_PER_MEETING
+): OutboundResults {
+  const monthlySpend = inputs.targetMeetingsPerMonth * costPerMeeting;
   const newClientsPerMonth = inputs.targetMeetingsPerMonth * (inputs.closeRate / 100);
   const cac = newClientsPerMonth > 0 ? monthlySpend / newClientsPerMonth : 0;
   const arr = inputs.averageMRR * 12;

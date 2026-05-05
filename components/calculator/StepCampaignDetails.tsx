@@ -12,7 +12,7 @@
 import StepCampaignDetailsGTME from "@/components/calculator/StepCampaignDetailsGTME";
 import StepCampaignDetailsOutbound from "@/components/calculator/StepCampaignDetailsOutbound";
 import { useCalculator } from "@/lib/calculatorStore";
-import { calculateOutboundResults } from "@/lib/formulas/outbound";
+import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
 
@@ -29,7 +29,8 @@ export default function StepCampaignDetails(): React.JSX.Element {
   const isGTMEOnly = hasGTME && !hasOutbound;
 
   const handleCombinedNext = (): void => {
-    const outboundComputed = calculateOutboundResults(outboundInputs);
+    const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
+    const outboundComputed = calculateOutboundResults(outboundInputs, costPerMeeting);
     dispatch({ type: "SET_OUTBOUND_RESULTS", payload: outboundComputed });
     dispatch({
       type: "UPDATE_GTME_INPUTS",
