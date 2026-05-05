@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
+import { convertAmount } from "@/lib/currencyConversion";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency } from "@/types/calculator";
@@ -43,9 +45,29 @@ export default function StepCampaignDetailsGTME({
 }: StepCampaignDetailsGTMEProps): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { gtmeInputs } = state;
+  const [previousCurrency, setPreviousCurrency] = useState<Currency>(gtmeInputs.currency);
   const sym = currencySymbol(gtmeInputs.currency);
   const monthlyCost =
     gtmeInputs.durationMonths > 0 ? gtmeInputs.totalBudget / gtmeInputs.durationMonths : 0;
+
+  const handleCurrencyChange = (newCurrency: Currency): void => {
+    if (newCurrency === gtmeInputs.currency) {
+      return;
+    }
+
+    const newBudget = convertAmount(gtmeInputs.totalBudget, previousCurrency, newCurrency);
+    const newDealSize = convertAmount(gtmeInputs.averageDealSize, previousCurrency, newCurrency);
+
+    dispatch({
+      type: "UPDATE_GTME_INPUTS",
+      payload: {
+        currency: newCurrency,
+        totalBudget: newBudget,
+        averageDealSize: newDealSize,
+      },
+    });
+    setPreviousCurrency(newCurrency);
+  };
 
   const handleNext = (): void => {
     dispatch({
@@ -82,7 +104,7 @@ export default function StepCampaignDetailsGTME({
                 <button
                   key={c}
                   type="button"
-                  onClick={() => dispatch({ type: "UPDATE_GTME_INPUTS", payload: { currency: c } })}
+                  onClick={() => handleCurrencyChange(c)}
                   className={[
                     "rounded-full border px-4 py-2 text-sm font-semibold calculator-interactive",
                     gtmeInputs.currency === c

@@ -1,12 +1,7 @@
 import type { OutboundInputs, OutboundResults } from "@/types/calculator";
+import { exchangeRates } from "@/lib/currencyConversion";
 
 const COST_PER_MEETING = 600;
-const exchangeRates = {
-  EUR: 1,
-  USD: 1.08,
-  GBP: 0.86,
-  SEK: 11.5,
-} as const;
 
 export function getCostPerMeetingForCurrency(currency: OutboundInputs["currency"]): number {
   return Math.round(COST_PER_MEETING * exchangeRates[currency]);

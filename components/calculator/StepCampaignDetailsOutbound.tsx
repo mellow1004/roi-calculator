@@ -2,10 +2,12 @@
 
 import { useState, type CSSProperties } from "react";
 import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
+import { convertAmount } from "@/lib/currencyConversion";
 import { formatCurrency } from "@/lib/formatCurrency";
 import {
   calculateOutboundResults,
   getCashFlowWarning,
+  getCostPerMeetingForCurrency,
   getRoiLabel,
   outboundRoiLabelBadgeClassName,
 } from "@/lib/formulas/outbound";
@@ -14,13 +16,6 @@ import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
 const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
-const baseCostPerMeeting = 600;
-const exchangeRates = {
-  EUR: 1,
-  USD: 1.08,
-  GBP: 0.86,
-  SEK: 11.5,
-} as const;
 const BASE_RETAINER_MIN_EUR = 5200;
 const BASE_CAMPAIGN_MIN_EUR = 7400;
 
@@ -57,10 +52,8 @@ export default function StepCampaignDetailsOutbound({
   const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
     outboundInputs.serviceModel ?? "retainer"
   );
-  const costPerMeetingByCurrency = Object.fromEntries(
-    CURRENCIES.map((currency) => [currency, Math.round(baseCostPerMeeting * exchangeRates[currency])])
-  ) as Record<Currency, number>;
-  const costPerMeeting = costPerMeetingByCurrency[outboundInputs.currency];
+  const [previousCurrency, setPreviousCurrency] = useState<Currency>(outboundInputs.currency);
+  const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
   const results = calculateOutboundResults(outboundInputs, costPerMeeting);
   const roiLabel = getRoiLabel(results.roi);
   const cashWarning = getCashFlowWarning(
@@ -76,13 +69,13 @@ export default function StepCampaignDetailsOutbound({
     retainer: Object.fromEntries(
       CURRENCIES.map((currency) => [
         currency,
-        Math.round(BASE_RETAINER_MIN_EUR * exchangeRates[currency]),
+        convertAmount(BASE_RETAINER_MIN_EUR, "EUR", currency),
       ])
     ) as Record<Currency, number>,
     campaign: Object.fromEntries(
       CURRENCIES.map((currency) => [
         currency,
-        Math.round(BASE_CAMPAIGN_MIN_EUR * exchangeRates[currency]),
+        convertAmount(BASE_CAMPAIGN_MIN_EUR, "EUR", currency),
       ])
     ) as Record<Currency, number>,
   };
@@ -108,22 +101,21 @@ export default function StepCampaignDetailsOutbound({
     if (newCurrency === outboundInputs.currency) {
       return;
     }
-    const oldRate = exchangeRates[outboundInputs.currency];
-    const newRate = exchangeRates[newCurrency];
-    const factor = newRate / oldRate;
-    const newCostPerMeeting = costPerMeetingByCurrency[newCurrency];
+    const newCostPerMeeting = getCostPerMeetingForCurrency(newCurrency);
     const newMinimum = minimums[serviceModel][newCurrency];
     const minMeetings = Math.ceil(newMinimum / newCostPerMeeting);
     const nextMeetings = Math.max(outboundInputs.targetMeetingsPerMonth, minMeetings);
+    const newMRR = convertAmount(outboundInputs.averageMRR, previousCurrency, newCurrency);
 
     dispatch({
       type: "UPDATE_OUTBOUND_INPUTS",
       payload: {
         currency: newCurrency,
-        averageMRR: Math.round(outboundInputs.averageMRR * factor),
+        averageMRR: newMRR,
         targetMeetingsPerMonth: nextMeetings,
       },
     });
+    setPreviousCurrency(newCurrency);
   };
 
   return (
