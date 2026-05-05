@@ -19,7 +19,7 @@ import StepSelectServices from "@/components/calculator/StepSelectServices";
 import StepYourDetails from "@/components/calculator/StepYourDetails";
 import { CalculatorProvider, useCalculator } from "@/lib/calculatorStore";
 import { calculateOutboundResults } from "@/lib/formulas/outbound";
-import type { CalculatorStep } from "@/types/calculator";
+import type { CalculatorStep } from "@/types";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
 
@@ -37,8 +37,10 @@ function stepContent(step: CalculatorStep): React.JSX.Element {
       return <StepConfirmation />;
     case "results":
       return <StepResults />;
-    default:
-      return <StepSelectServices />;
+    default: {
+      const _exhaustive: never = step;
+      return _exhaustive;
+    }
   }
 }
 

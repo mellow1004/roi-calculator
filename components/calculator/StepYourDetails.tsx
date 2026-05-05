@@ -81,7 +81,7 @@ export default function StepYourDetails(): React.JSX.Element {
       return;
     }
     dispatch({
-      type: "SET_LEAD_DETAILS",
+      type: "COMMIT_LEAD_DETAILS_TO_CONFIRMATION",
       payload: {
         fullName: leadDetails.fullName.trim(),
         companyName: leadDetails.companyName.trim(),
@@ -90,7 +90,6 @@ export default function StepYourDetails(): React.JSX.Element {
         gdprConsent: leadDetails.gdprConsent,
       },
     });
-    dispatch({ type: "SET_STEP", payload: "confirmation" });
   };
 
   const inputBase =

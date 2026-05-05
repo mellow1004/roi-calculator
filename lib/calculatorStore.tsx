@@ -23,6 +23,8 @@ export type CalculatorAction =
   | { type: "UPDATE_OUTBOUND_INPUTS"; payload: Partial<OutboundInputs> }
   | { type: "UPDATE_GTME_INPUTS"; payload: Partial<GTMEInputs> }
   | { type: "SET_LEAD_DETAILS"; payload: LeadDetails }
+  /** Atomically saves lead details and moves to the confirmation interstitial (avoids split updates). */
+  | { type: "COMMIT_LEAD_DETAILS_TO_CONFIRMATION"; payload: LeadDetails }
   | { type: "SET_OUTBOUND_RESULTS"; payload: OutboundResults | null }
   | { type: "SET_GTME_RESULTS"; payload: GTMEResults | null }
   | { type: "RESET" };
@@ -61,6 +63,12 @@ function calculatorReducer(state: CalculatorState, action: CalculatorAction): Ca
       };
     case "SET_LEAD_DETAILS":
       return { ...state, leadDetails: action.payload };
+    case "COMMIT_LEAD_DETAILS_TO_CONFIRMATION":
+      return {
+        ...state,
+        leadDetails: action.payload,
+        currentStep: "confirmation",
+      };
     case "SET_OUTBOUND_RESULTS":
       return { ...state, outboundResults: action.payload };
     case "SET_GTME_RESULTS":
