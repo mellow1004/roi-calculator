@@ -17,12 +17,15 @@ export type CalculatorStep =
 
 export type Currency = "EUR" | "USD" | "GBP" | "SEK";
 
+export type OutboundServiceModel = "retainer" | "campaign";
+
 export interface OutboundInputs {
   targetMeetingsPerMonth: number;
   closeRate: number;
   averageMRR: number;
   clientLifetimeYears: number;
   currency: Currency;
+  serviceModel: OutboundServiceModel;
 }
 
 export interface GTMEInputs {

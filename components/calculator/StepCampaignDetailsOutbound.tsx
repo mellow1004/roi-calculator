@@ -1,13 +1,18 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { calculateOutboundResults, getCashFlowWarning, getRoiLabel } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
-import type { Currency } from "@/types/calculator";
+import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
+const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
+const minimums = {
+  retainer: { SEK: 60000, EUR: 5200, USD: 5600, GBP: 4400 },
+  campaign: { SEK: 85000, EUR: 7400, USD: 7900, GBP: 6200 },
+} as const;
 
 function currencySymbol(currency: Currency): string {
   switch (currency) {
@@ -54,6 +59,9 @@ export default function StepCampaignDetailsOutbound({
 }: StepCampaignDetailsOutboundProps): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs } = state;
+  const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
+    outboundInputs.serviceModel ?? "retainer"
+  );
   const results = calculateOutboundResults(outboundInputs);
   const roiLabel = getRoiLabel(results.roi);
   const cashWarning = getCashFlowWarning(
@@ -65,6 +73,20 @@ export default function StepCampaignDetailsOutbound({
   const sym = currencySymbol(outboundInputs.currency);
   const yearsWhole = Math.floor(outboundInputs.clientLifetimeYears);
   const monthsTotal = Math.round(outboundInputs.clientLifetimeYears * 12);
+  const currentMinimum = minimums[serviceModel][outboundInputs.currency];
+  const isBelowMinimum = results.monthlySpend < currentMinimum;
+  const monthlyBudgetLabel =
+    serviceModel === "retainer" ? "Estimated monthly retainer" : "Estimated campaign investment";
+  const modelWarningText =
+    serviceModel === "retainer"
+      ? `The minimum monthly retainer with Brightvision is ${formatCurrency(
+          currentMinimum,
+          outboundInputs.currency
+        )}. Your current input is below this threshold — consider increasing your target meetings.`
+      : `The minimum campaign investment with Brightvision is ${formatCurrency(
+          currentMinimum,
+          outboundInputs.currency
+        )}. Your current input is below this threshold.`;
 
   const inputClass =
     "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out focus:border-[var(--color-accent)] focus:outline-none focus:ring-[3px] focus:ring-[rgba(26,92,56,0.12)]";
@@ -77,6 +99,32 @@ export default function StepCampaignDetailsOutbound({
             <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
               Campaign details
             </h2>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
+              Service model
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SERVICE_MODELS.map((model) => (
+                <button
+                  key={model}
+                  type="button"
+                  onClick={() => {
+                    setServiceModel(model);
+                    dispatch({ type: "UPDATE_OUTBOUND_INPUTS", payload: { serviceModel: model } });
+                  }}
+                  className={[
+                    "rounded-full border px-4 py-2 text-sm font-semibold capitalize calculator-interactive",
+                    serviceModel === model
+                      ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                      : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:border-[#9CA3AF]",
+                  ].join(" ")}
+                >
+                  {model}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -244,7 +292,7 @@ export default function StepCampaignDetailsOutbound({
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                Monthly spend
+                {monthlyBudgetLabel}
                 <InfoTooltipTrigger tooltipKey="MONTHLY_SPEND" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
@@ -302,6 +350,12 @@ export default function StepCampaignDetailsOutbound({
           {cashWarning ? (
             <p className="mt-6 rounded-lg border-l-4 border-[var(--color-amber)] bg-[#FFFBEB] p-3 pl-4 text-sm leading-relaxed text-[var(--color-text-primary)]">
               {cashWarning}
+            </p>
+          ) : null}
+
+          {isBelowMinimum ? (
+            <p className="mt-4 rounded-lg border-l-4 border-[var(--color-amber)] bg-[#FFFBEB] px-4 py-3 text-[13px] leading-relaxed text-[#92400E]">
+              ⚠️ {modelWarningText}
             </p>
           ) : null}
         </div>

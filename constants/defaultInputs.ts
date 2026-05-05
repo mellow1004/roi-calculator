@@ -6,6 +6,7 @@ export const defaultOutboundInputs: OutboundInputs = {
   averageMRR: 2000,
   clientLifetimeYears: 4,
   currency: "EUR",
+  serviceModel: "retainer",
 };
 
 export const defaultGTMEInputs: GTMEInputs = {
