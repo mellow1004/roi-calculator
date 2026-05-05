@@ -12,28 +12,16 @@
  */
 
 import { useEffect, useState } from "react";
-import { tooltips } from "@/constants/tooltips";
+import { InfoTooltipTrigger } from "@/components/calculator/Tooltip";
+import type { TooltipKey } from "@/constants/tooltips";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { getGTMERoiLabel } from "@/lib/formulas/gtme";
 import { getCashFlowWarning, getRoiLabel } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, GTMEResults, OutboundResults } from "@/types/calculator";
 
-type TooltipKey = keyof typeof tooltips;
-
 function TooltipIcon({ tooltipKey }: { tooltipKey: TooltipKey }): React.JSX.Element {
-  const text = tooltips[tooltipKey];
-  return (
-    <span
-      className="ml-1 inline-flex cursor-help text-[var(--color-text-secondary)] opacity-70 transition-opacity duration-150 hover:opacity-100"
-      title={text}
-      tabIndex={0}
-      role="note"
-      aria-label={text}
-    >
-      ⓘ
-    </span>
-  );
+  return <InfoTooltipTrigger tooltipKey={tooltipKey} className="ml-1" />;
 }
 
 function MetricTile({
@@ -116,37 +104,37 @@ function GtmeMetricTilesGrid({
       <MetricTile
         label="Projected Revenue"
         value={formatCurrency(gtmeResults.projectedRevenue, gtmeCurrency)}
-        tooltipKey="ARR"
+        tooltipKey="PROJECTED_REVENUE"
         surfaceClassName="bg-[var(--color-green-subtle)]"
       />
       <MetricTile
         label="New Customers"
         value={String(gtmeResults.newCustomers)}
-        tooltipKey="MRR"
+        tooltipKey="NEW_CLIENTS"
         surfaceClassName="bg-[var(--color-blue-subtle)]"
       />
       <MetricTile
         label="Cost per Lead"
         value={formatCurrency(gtmeResults.costPerLead, gtmeCurrency)}
-        tooltipKey="CAC"
+        tooltipKey="COST_PER_LEAD"
         surfaceClassName="bg-[var(--color-yellow-subtle)]"
       />
       <MetricTile
         label="Cost per Acquisition"
         value={formatCurrency(gtmeResults.costPerAcquisition, gtmeCurrency)}
-        tooltipKey="CLV"
+        tooltipKey="COST_PER_ACQ"
         surfaceClassName="bg-[var(--color-red-subtle)]"
       />
       <MetricTile
         label="Lifetime Revenue"
         value={formatCurrency(gtmeResults.lifetimeRevenue, gtmeCurrency)}
-        tooltipKey="LTV"
+        tooltipKey="LIFETIME_REVENUE"
         surfaceClassName="bg-[var(--color-accent-light)]"
       />
       <MetricTile
         label="Lifetime ROI"
         value={`${gtmeResults.lifetimeRoi}%`}
-        tooltipKey="ROI"
+        tooltipKey="LIFETIME_ROI"
         surfaceClassName="bg-[var(--color-surface)]"
       />
     </div>
@@ -165,7 +153,7 @@ function OutboundMetricTilesGrid({
       <MetricTile
         label="New clients / month"
         value={outboundResults.newClientsPerMonth.toFixed(2)}
-        tooltipKey="MRR"
+        tooltipKey="NEW_CLIENTS"
       />
       <MetricTile
         label="CAC"

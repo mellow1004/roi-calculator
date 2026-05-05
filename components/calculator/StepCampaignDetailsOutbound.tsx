@@ -1,7 +1,7 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
-import { tooltips } from "@/constants/tooltips";
+import type { CSSProperties } from "react";
+import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { calculateOutboundResults, getCashFlowWarning, getRoiLabel } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
@@ -22,32 +22,6 @@ function currencySymbol(currency: Currency): string {
     default:
       return "";
   }
-}
-
-type TooltipKey = keyof typeof tooltips;
-
-function LabelWithTooltip({
-  children,
-  tooltipKey,
-}: {
-  children: ReactNode;
-  tooltipKey: TooltipKey;
-}): React.JSX.Element {
-  const text = tooltips[tooltipKey];
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {children}
-      <span
-        className="inline-flex cursor-help text-[var(--color-text-secondary)] opacity-70 transition-opacity duration-150 hover:opacity-100"
-        title={text}
-        tabIndex={0}
-        role="note"
-        aria-label={text}
-      >
-        ⓘ
-      </span>
-    </span>
-  );
 }
 
 function roiLabelStyles(label: ReturnType<typeof getRoiLabel>): string {
@@ -107,7 +81,7 @@ export default function StepCampaignDetailsOutbound({
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
-              <LabelWithTooltip tooltipKey="ROI">Currency</LabelWithTooltip>
+              Currency
             </label>
             <div className="flex flex-wrap gap-2">
               {CURRENCIES.map((c) => (
@@ -135,9 +109,7 @@ export default function StepCampaignDetailsOutbound({
               htmlFor="target-meetings"
               className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
             >
-              <LabelWithTooltip tooltipKey="CAC">
-                Desired booked meetings per month
-              </LabelWithTooltip>
+              <LabelWithTooltip tooltipKey="MEETINGS">Desired booked meetings per month</LabelWithTooltip>
             </label>
             <input
               id="target-meetings"
@@ -158,7 +130,7 @@ export default function StepCampaignDetailsOutbound({
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <label htmlFor="close-rate" className="text-sm font-medium text-[var(--color-text-primary)]">
-                <LabelWithTooltip tooltipKey="ROI">Close rate</LabelWithTooltip>
+                <LabelWithTooltip tooltipKey="CLOSE_RATE">Close rate</LabelWithTooltip>
               </label>
               <span className="font-display text-xl tabular-nums text-[var(--color-accent)]">
                 {outboundInputs.closeRate}%
@@ -250,16 +222,18 @@ export default function StepCampaignDetailsOutbound({
 
           <dl className="mt-6 space-y-4">
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
-              <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 Meetings / month
+                <InfoTooltipTrigger tooltipKey="MEETINGS" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {outboundInputs.targetMeetingsPerMonth}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
-              <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 New clients / month
+                <InfoTooltipTrigger tooltipKey="NEW_CLIENTS" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="text-right font-display text-2xl font-normal tabular-nums text-white">
                 {results.newClientsPerMonth.toFixed(2)}
@@ -269,8 +243,9 @@ export default function StepCampaignDetailsOutbound({
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
-              <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 Monthly spend
+                <InfoTooltipTrigger tooltipKey="MONTHLY_SPEND" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.monthlySpend, outboundInputs.currency)}
@@ -279,13 +254,7 @@ export default function StepCampaignDetailsOutbound({
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 CAC
-                <span
-                  className="cursor-help normal-case opacity-80 hover:opacity-100"
-                  title={tooltips.CAC}
-                  aria-label={tooltips.CAC}
-                >
-                  ⓘ
-                </span>
+                <InfoTooltipTrigger tooltipKey="CAC" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.cac, outboundInputs.currency)}
@@ -294,13 +263,7 @@ export default function StepCampaignDetailsOutbound({
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 ARR
-                <span
-                  className="cursor-help normal-case opacity-80 hover:opacity-100"
-                  title={tooltips.ARR}
-                  aria-label={tooltips.ARR}
-                >
-                  ⓘ
-                </span>
+                <InfoTooltipTrigger tooltipKey="ARR" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.arr, outboundInputs.currency)}
@@ -309,13 +272,7 @@ export default function StepCampaignDetailsOutbound({
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 LTV
-                <span
-                  className="cursor-help normal-case opacity-80 hover:opacity-100"
-                  title={tooltips.LTV}
-                  aria-label={tooltips.LTV}
-                >
-                  ⓘ
-                </span>
+                <InfoTooltipTrigger tooltipKey="LTV" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.ltv, outboundInputs.currency)}
@@ -324,13 +281,7 @@ export default function StepCampaignDetailsOutbound({
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 ROI
-                <span
-                  className="cursor-help normal-case opacity-80 hover:opacity-100"
-                  title={tooltips.ROI}
-                  aria-label={tooltips.ROI}
-                >
-                  ⓘ
-                </span>
+                <InfoTooltipTrigger tooltipKey="ROI" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-2xl font-normal tabular-nums text-white">

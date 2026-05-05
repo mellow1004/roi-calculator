@@ -1,7 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { tooltips } from "@/constants/tooltips";
+import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency } from "@/types/calculator";
@@ -28,32 +27,6 @@ function currencySymbol(currency: Currency): string {
     default:
       return "";
   }
-}
-
-type TooltipKey = keyof typeof tooltips;
-
-function LabelWithTooltip({
-  children,
-  tooltipKey,
-}: {
-  children: ReactNode;
-  tooltipKey: TooltipKey;
-}): React.JSX.Element {
-  const text = tooltips[tooltipKey];
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {children}
-      <span
-        className="inline-flex cursor-help text-[var(--color-text-secondary)] opacity-70 transition-opacity duration-150 hover:opacity-100"
-        title={text}
-        tabIndex={0}
-        role="note"
-        aria-label={text}
-      >
-        ⓘ
-      </span>
-    </span>
-  );
 }
 
 function durationLabel(months: number): string {
@@ -102,7 +75,7 @@ export default function StepCampaignDetailsGTME({
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
-              <LabelWithTooltip tooltipKey="ROI">Currency</LabelWithTooltip>
+              Currency
             </label>
             <div className="flex flex-wrap gap-2">
               {CURRENCIES.map((c) => (
@@ -128,7 +101,7 @@ export default function StepCampaignDetailsGTME({
               htmlFor="gtme-total-budget"
               className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
             >
-              <LabelWithTooltip tooltipKey="CAC">Total Campaign Budget</LabelWithTooltip>
+              <LabelWithTooltip tooltipKey="TOTAL_BUDGET">Total Campaign Budget</LabelWithTooltip>
             </label>
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
@@ -156,7 +129,7 @@ export default function StepCampaignDetailsGTME({
               htmlFor="gtme-deal-size"
               className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
             >
-              <LabelWithTooltip tooltipKey="LTV">
+              <LabelWithTooltip tooltipKey="DEAL_SIZE">
                 Average Deal Size / Revenue per Customer
               </LabelWithTooltip>
             </label>
@@ -183,7 +156,7 @@ export default function StepCampaignDetailsGTME({
 
           <div>
             <span className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
-              <LabelWithTooltip tooltipKey="ROI">Campaign Duration</LabelWithTooltip>
+              Campaign Duration
             </span>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {DURATION_OPTIONS.map((opt) => (
@@ -219,8 +192,9 @@ export default function StepCampaignDetailsGTME({
           </p>
 
           <div className="mt-6 border-b border-[var(--color-border)] pb-6">
-            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+            <p className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
               Total Budget
+              <InfoTooltipTrigger tooltipKey="TOTAL_BUDGET" />
             </p>
             <p className="font-display mt-2 text-[36px] font-normal leading-none text-[var(--color-accent)]">
               {formatCurrency(gtmeInputs.totalBudget, gtmeInputs.currency)}
@@ -229,8 +203,9 @@ export default function StepCampaignDetailsGTME({
 
           <dl className="mt-6 space-y-4 text-sm">
             <div className="flex justify-between gap-4 border-b border-[var(--color-border)] pb-3">
-              <dt className="text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
+              <dt className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">
                 Monthly Cost
+                <InfoTooltipTrigger tooltipKey="MONTHLY_COST" />
               </dt>
               <dd className="font-medium tabular-nums text-[var(--color-text-primary)]">
                 {formatCurrency(monthlyCost, gtmeInputs.currency)}

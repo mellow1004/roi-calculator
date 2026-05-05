@@ -13,39 +13,13 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
-import { tooltips } from "@/constants/tooltips";
+import { LabelWithTooltip } from "@/components/calculator/Tooltip";
 import { calculateGTMEResults, getGTMERoiLabel } from "@/lib/formulas/gtme";
 import { calculateOutboundResults } from "@/lib/formulas/outbound";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
-
-type TooltipKey = keyof typeof tooltips;
-
-function LabelWithTooltip({
-  children,
-  tooltipKey,
-}: {
-  children: ReactNode;
-  tooltipKey: TooltipKey;
-}): React.JSX.Element {
-  const text = tooltips[tooltipKey];
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {children}
-      <span
-        className="inline-flex cursor-help text-[var(--color-text-secondary)] opacity-70 transition-opacity duration-150 hover:opacity-100"
-        title={text}
-        tabIndex={0}
-        role="note"
-        aria-label={text}
-      >
-        ⓘ
-      </span>
-    </span>
-  );
-}
 
 const RING_RADIUS = 78;
 const RING_STROKE = 10;
@@ -278,7 +252,7 @@ export default function StepPerformance(): React.JSX.Element {
         <div className="flex flex-col gap-8">
           <SliderRow
             id="expected-lead-volume"
-            label={<LabelWithTooltip tooltipKey="CAC">Expected Lead Volume</LabelWithTooltip>}
+            label={<LabelWithTooltip tooltipKey="LEAD_VOLUME">Expected Lead Volume</LabelWithTooltip>}
             valueDisplay={gtmeInputs.expectedLeadVolume.toLocaleString()}
             min={10}
             max={5000}
@@ -291,7 +265,7 @@ export default function StepPerformance(): React.JSX.Element {
 
           <SliderRow
             id="lead-to-opp"
-            label={<LabelWithTooltip tooltipKey="ROI">Lead → Opportunity Rate</LabelWithTooltip>}
+            label={<LabelWithTooltip tooltipKey="LEAD_TO_OPP">Lead → Opportunity Rate</LabelWithTooltip>}
             valueDisplay={`${gtmeInputs.leadToOpportunityRate}%`}
             min={1}
             max={50}
@@ -305,7 +279,7 @@ export default function StepPerformance(): React.JSX.Element {
           <SliderRow
             id="opp-to-customer"
             label={
-              <LabelWithTooltip tooltipKey="LTV">Opportunity → Customer Rate</LabelWithTooltip>
+              <LabelWithTooltip tooltipKey="OPP_TO_CUSTOMER">Opportunity → Customer Rate</LabelWithTooltip>
             }
             valueDisplay={`${gtmeInputs.opportunityToCustomerRate}%`}
             min={1}
@@ -319,7 +293,7 @@ export default function StepPerformance(): React.JSX.Element {
 
           <SliderRow
             id="retention"
-            label={<LabelWithTooltip tooltipKey="CLV">Customer Retention Rate</LabelWithTooltip>}
+            label={<LabelWithTooltip tooltipKey="RETENTION">Customer Retention Rate</LabelWithTooltip>}
             valueDisplay={`${gtmeInputs.customerRetentionRate}%`}
             min={0}
             max={100}
@@ -332,7 +306,7 @@ export default function StepPerformance(): React.JSX.Element {
 
           <SliderRow
             id="clv-mult"
-            label={<LabelWithTooltip tooltipKey="CLV">CLV Multiplier</LabelWithTooltip>}
+            label={<LabelWithTooltip tooltipKey="CLV_MULTIPLIER">CLV Multiplier</LabelWithTooltip>}
             valueDisplay={`${gtmeInputs.clvMultiplier}x`}
             min={1}
             max={10}
