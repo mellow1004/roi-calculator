@@ -5,10 +5,12 @@ import type { Service } from "@/types/calculator";
 function ServiceCard({
   service,
   selected,
+  showComingSoonBadge = false,
   onToggle,
 }: {
   service: Service;
   selected: boolean;
+  showComingSoonBadge?: boolean;
   onToggle: (serviceId: string) => void;
 }): React.JSX.Element {
   return (
@@ -23,6 +25,18 @@ function ServiceCard({
       ].join(" ")}
       aria-pressed={selected}
     >
+      {showComingSoonBadge ? (
+        <span
+          className="absolute right-12 top-3 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+          style={{
+            background: "#F3F4F6",
+            color: "var(--color-text-secondary)",
+            letterSpacing: "0.04em",
+          }}
+        >
+          Coming soon
+        </span>
+      ) : null}
       <span
         className={[
           "absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full transition-all duration-150 ease-out",
@@ -61,6 +75,9 @@ export default function StepSelectServices(): React.JSX.Element {
   const outboundServices = services.filter((service) => service.category === "outbound");
   const inboundServices = services.filter((service) => service.category === "inbound");
   const hasSelection = state.selectedServices.length > 0;
+  const hasSelectedInbound = inboundServices.some((service) =>
+    state.selectedServices.includes(service.id)
+  );
 
   const handleToggleService = (serviceId: string): void => {
     const isSelected = state.selectedServices.includes(serviceId);
@@ -119,10 +136,16 @@ export default function StepSelectServices(): React.JSX.Element {
                 key={service.id}
                 service={service}
                 selected={state.selectedServices.includes(service.id)}
+                showComingSoonBadge
                 onToggle={handleToggleService}
               />
             ))}
           </div>
+          {hasSelectedInbound ? (
+            <p className="mt-2 text-xs italic text-[var(--color-text-secondary)]">
+              * Inbound service calculators are coming in v2
+            </p>
+          ) : null}
         </div>
       </div>
 

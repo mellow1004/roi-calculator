@@ -15,6 +15,12 @@ import { useCalculator } from "@/lib/calculatorStore";
 import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
+const INBOUND_SERVICE_IDS = [
+  "performance-marketing",
+  "content-marketing",
+  "marketing-automation",
+  "account-based-marketing",
+] as const;
 
 export default function StepCampaignDetails(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
@@ -27,6 +33,10 @@ export default function StepCampaignDetails(): React.JSX.Element {
   const isCombined = hasOutbound && hasGTME;
   const isOutboundOnly = hasOutbound && !hasGTME;
   const isGTMEOnly = hasGTME && !hasOutbound;
+  const hasInbound = selectedServices.some((id) =>
+    (INBOUND_SERVICE_IDS as readonly string[]).includes(id)
+  );
+  const isInboundOnly = hasInbound && !hasOutbound && !hasGTME;
 
   const handleCombinedNext = (): void => {
     const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
@@ -85,6 +95,39 @@ export default function StepCampaignDetails(): React.JSX.Element {
 
   if (isGTMEOnly) {
     return <StepCampaignDetailsGTME />;
+  }
+
+  if (isInboundOnly) {
+    return (
+      <section className="mx-auto w-full max-w-[600px] px-6 py-12 text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-accent-light)] text-3xl">
+          🚀
+        </div>
+        <h2 className="font-display text-[32px] leading-tight text-[var(--color-text-primary)]">
+          Inbound calculators are coming soon
+        </h2>
+        <p className="mx-auto mt-4 max-w-[480px] text-[15px] leading-[1.6] text-[var(--color-text-secondary)]">
+          We&apos;re building ROI calculators for Performance Marketing, Content Marketing,
+          Marketing Automation, and Account-Based Marketing. In the meantime, our experts can walk
+          you through the numbers personally.
+        </p>
+        <a
+          href="https://www.brightvision.com/contact"
+          target="_blank"
+          rel="noreferrer"
+          className="btn-primary mx-auto mt-8 flex h-[52px] w-full max-w-[320px] items-center justify-center calculator-interactive"
+        >
+          Book a call with an expert →
+        </a>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "SET_STEP", payload: "select-services" })}
+          className="mx-auto mt-4 border-0 bg-transparent text-sm text-[var(--color-text-secondary)] calculator-interactive"
+        >
+          ← Choose different services
+        </button>
+      </section>
+    );
   }
 
   return <StepCampaignDetailsOutbound />;
