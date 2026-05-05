@@ -20,6 +20,11 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
+const serviceLabels: Record<(typeof OUTBOUND_SERVICE_IDS)[number], string> = {
+  "sdr-team": "SDR Team",
+  "ae-team": "AE Team",
+  "event-lead-gen": "Event Lead Generation",
+};
 
 const RING_RADIUS = 78;
 const RING_STROKE = 10;
@@ -118,12 +123,18 @@ function SliderRow({
 
 function OutboundConfirmationSummary(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
-  const { outboundInputs, outboundResults } = state;
+  const { outboundInputs, outboundResults, selectedServices } = state;
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
   const results = outboundResults ?? calculateOutboundResults(outboundInputs, costPerMeeting);
   const currency = outboundInputs.currency;
   const yearsWhole = Math.floor(outboundInputs.clientLifetimeYears);
   const monthsTotal = Math.round(outboundInputs.clientLifetimeYears * 12);
+  const selectedOutboundLabels = selectedServices
+    .filter((id): id is (typeof OUTBOUND_SERVICE_IDS)[number] =>
+      (OUTBOUND_SERVICE_IDS as readonly string[]).includes(id)
+    )
+    .map((id) => serviceLabels[id]);
+  const serviceTitle = selectedOutboundLabels.join(" + ");
 
   const rows: Array<{ label: string; value: string }> = [
     {
@@ -168,6 +179,11 @@ function OutboundConfirmationSummary(): React.JSX.Element {
         <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-secondary)]">
           Review your campaign details below before we collect your information.
         </p>
+        {serviceTitle ? (
+          <p className="mt-3 text-sm font-semibold text-[var(--color-accent)]">
+            Configuring: {serviceTitle}
+          </p>
+        ) : null}
       </div>
 
       <div className="calculator-card mx-auto mt-8 max-w-xl p-6 md:p-8">

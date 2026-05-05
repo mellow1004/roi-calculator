@@ -16,6 +16,12 @@ import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
 const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
+const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
+const serviceLabels: Record<(typeof OUTBOUND_SERVICE_IDS)[number], string> = {
+  "sdr-team": "SDR Team",
+  "ae-team": "AE Team",
+  "event-lead-gen": "Event Lead Generation",
+};
 const BASE_RETAINER_MIN_EUR = 5200;
 const BASE_CAMPAIGN_MIN_EUR = 7400;
 
@@ -48,7 +54,7 @@ export default function StepCampaignDetailsOutbound({
   hideNavigation = false,
 }: StepCampaignDetailsOutboundProps): React.JSX.Element {
   const { state, dispatch } = useCalculator();
-  const { outboundInputs } = state;
+  const { outboundInputs, selectedServices } = state;
   const [serviceModel, setServiceModel] = useState<OutboundServiceModel>(
     outboundInputs.serviceModel ?? "retainer"
   );
@@ -93,6 +99,12 @@ export default function StepCampaignDetailsOutbound({
           currentMinimum,
           outboundInputs.currency
         )}. Your current input is below this threshold.`;
+  const selectedOutboundLabels = selectedServices
+    .filter((id): id is (typeof OUTBOUND_SERVICE_IDS)[number] =>
+      (OUTBOUND_SERVICE_IDS as readonly string[]).includes(id)
+    )
+    .map((id) => serviceLabels[id]);
+  const serviceTitle = selectedOutboundLabels.join(" + ");
 
   const inputClass =
     "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out focus:border-[var(--color-accent)] focus:outline-none focus:ring-[3px] focus:ring-[rgba(26,92,56,0.12)]";
@@ -126,6 +138,11 @@ export default function StepCampaignDetailsOutbound({
             <h2 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
               Campaign details
             </h2>
+            {serviceTitle ? (
+              <p className="mb-6 mt-2 text-sm font-semibold text-[var(--color-accent)]">
+                Configuring: {serviceTitle}
+              </p>
+            ) : null}
           </div>
 
           <div>

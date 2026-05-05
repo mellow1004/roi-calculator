@@ -111,21 +111,23 @@ export default function StepCampaignDetails(): React.JSX.Element {
           Marketing Automation, and Account-Based Marketing. In the meantime, our experts can walk
           you through the numbers personally.
         </p>
-        <a
-          href="https://www.brightvision.com/contact"
-          target="_blank"
-          rel="noreferrer"
-          className="btn-primary mx-auto mt-8 flex h-[52px] w-full max-w-[320px] items-center justify-center calculator-interactive"
-        >
-          Book a call with an expert →
-        </a>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: "SET_STEP", payload: "select-services" })}
-          className="mx-auto mt-4 border-0 bg-transparent text-sm text-[var(--color-text-secondary)] calculator-interactive"
-        >
-          ← Choose different services
-        </button>
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <a
+            href="https://www.brightvision.com/contact"
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary flex h-[52px] w-full max-w-[320px] items-center justify-center calculator-interactive"
+          >
+            Book a call with an expert →
+          </a>
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "SET_STEP", payload: "select-services" })}
+            className="border-0 bg-transparent text-sm text-[var(--color-text-secondary)] calculator-interactive"
+          >
+            ← Choose different services
+          </button>
+        </div>
       </section>
     );
   }
