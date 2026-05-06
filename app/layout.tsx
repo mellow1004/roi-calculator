@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: "ROI Calculator · Brightvision",
   description:
     "Calculate your projected ROI for Brightvision's marketing and GTM services in under 3 minutes.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
