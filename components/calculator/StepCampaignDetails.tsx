@@ -20,6 +20,7 @@ const INBOUND_SERVICE_IDS = [
   "content-marketing",
   "marketing-automation",
   "account-based-marketing",
+  "channel-marketing",
 ] as const;
 
 export default function StepCampaignDetails(): React.JSX.Element {
@@ -108,8 +109,8 @@ export default function StepCampaignDetails(): React.JSX.Element {
         </h2>
         <p className="mx-auto mt-4 max-w-[480px] text-[15px] leading-[1.6] text-[var(--color-text-secondary)]">
           We&apos;re building ROI calculators for Performance Marketing, Content Marketing,
-          Marketing Automation, and Account-Based Marketing. In the meantime, our experts can walk
-          you through the numbers personally.
+          Marketing Automation, Account-Based Marketing, and Channel Marketing. In the meantime,
+          our experts can walk you through the numbers personally.
         </p>
         <div className="mt-8 flex flex-col items-center gap-4">
           <a

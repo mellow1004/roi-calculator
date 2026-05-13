@@ -3,6 +3,7 @@ export type ServiceCategory = "outbound" | "inbound";
 export interface Service {
   id: string;
   name: string;
+  sublabel?: string;
   description: string;
   category: ServiceCategory;
 }

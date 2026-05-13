@@ -4,12 +4,14 @@ export const services: Service[] = [
   {
     id: "sdr-team",
     name: "SDR Team as a Service",
+    sublabel: "Telemarketing",
     description: "Dedicated SDR support to build and qualify outbound pipeline.",
     category: "outbound",
   },
   {
     id: "ae-team",
     name: "AE Team as a Service",
+    sublabel: "Telemarketing",
     description: "Account executive resources to run demos and close revenue opportunities.",
     category: "outbound",
   },
@@ -47,6 +49,13 @@ export const services: Service[] = [
     id: "account-based-marketing",
     name: "Account-Based Marketing",
     description: "Targeted account programs aligning sales and marketing on priority segments.",
+    category: "inbound",
+  },
+  {
+    id: "channel-marketing",
+    name: "Channel Marketing",
+    description:
+      "Partner and reseller programs that extend your reach through indirect sales channels.",
     category: "inbound",
   },
 ];
