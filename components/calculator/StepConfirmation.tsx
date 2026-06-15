@@ -1,6 +1,6 @@
 "use client";
 
-import { formatCurrency } from "@/lib/formatCurrency";
+import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
 import { useCalculator } from "@/lib/calculatorStore";
 
 function firstNameFromFullName(fullName: string): string {
@@ -13,7 +13,8 @@ function firstNameFromFullName(fullName: string): string {
 
 export default function StepConfirmation(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
-  const { leadDetails, gtmeResults, outboundResults, gtmeInputs, outboundInputs } = state;
+  const { leadDetails, gtmeResults, outboundResults, eventResults, gtmeInputs, outboundInputs, eventInputs } =
+    state;
 
   const firstName = firstNameFromFullName(leadDetails.fullName);
   const workEmail = leadDetails.workEmail.trim();
@@ -21,8 +22,28 @@ export default function StepConfirmation(): React.JSX.Element {
 
   const gtmeCurrency = gtmeInputs.currency;
   const outboundCurrency = outboundInputs.currency;
+  const eventCurrency = eventInputs.currency;
 
   const gridCells = (() => {
+    if (eventResults) {
+      return [
+        {
+          label: "Net Return",
+          value: formatEventCurrency(eventResults.netReturn, eventCurrency),
+        },
+        { label: "New Clients", value: String(eventResults.clients) },
+        {
+          label: "Campaign Cost",
+          value: formatEventCurrency(eventResults.campaignCost, eventCurrency),
+        },
+        {
+          label: "ROI",
+          value: eventResults.isBreakEven
+            ? `${eventResults.roiMultiplier}× · ${eventResults.roiPercentage}%`
+            : `Below break-even · −${Math.abs(eventResults.roiPercentage)}%`,
+        },
+      ];
+    }
     if (gtmeResults && outboundResults) {
       return [
         { label: "ROI", value: `${gtmeResults.roi}%` },

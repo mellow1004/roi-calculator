@@ -1,3 +1,7 @@
+import type { EventInputs, EventResults } from "@/lib/formulas/event";
+
+export type { EventInputs, EventResults };
+
 export type ServiceCategory = "outbound" | "inbound";
 
 export interface Service {
@@ -74,7 +78,9 @@ export interface CalculatorState {
   selectedServices: string[];
   outboundInputs: OutboundInputs;
   gtmeInputs: GTMEInputs;
+  eventInputs: EventInputs;
   leadDetails: LeadDetails;
   outboundResults: OutboundResults | null;
   gtmeResults: GTMEResults | null;
+  eventResults: EventResults | null;
 }

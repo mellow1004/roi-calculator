@@ -7,9 +7,12 @@ import React, {
   type ReactNode,
 } from "react";
 import { defaultGTMEInputs, defaultOutboundInputs } from "@/constants/defaultInputs";
+import { defaultEventInputs } from "@/constants/eventDefaults";
 import type {
   CalculatorState,
   CalculatorStep,
+  EventInputs,
+  EventResults,
   GTMEInputs,
   GTMEResults,
   LeadDetails,
@@ -22,11 +25,13 @@ export type CalculatorAction =
   | { type: "SET_SELECTED_SERVICES"; payload: string[] }
   | { type: "UPDATE_OUTBOUND_INPUTS"; payload: Partial<OutboundInputs> }
   | { type: "UPDATE_GTME_INPUTS"; payload: Partial<GTMEInputs> }
+  | { type: "UPDATE_EVENT_INPUTS"; payload: Partial<EventInputs> }
   | { type: "SET_LEAD_DETAILS"; payload: LeadDetails }
   /** Atomically saves lead details and moves to the confirmation interstitial (avoids split updates). */
   | { type: "COMMIT_LEAD_DETAILS_TO_CONFIRMATION"; payload: LeadDetails }
   | { type: "SET_OUTBOUND_RESULTS"; payload: OutboundResults | null }
   | { type: "SET_GTME_RESULTS"; payload: GTMEResults | null }
+  | { type: "SET_EVENT_RESULTS"; payload: EventResults | null }
   | { type: "RESET" };
 
 export const initialCalculatorState: CalculatorState = {
@@ -34,6 +39,7 @@ export const initialCalculatorState: CalculatorState = {
   selectedServices: [],
   outboundInputs: defaultOutboundInputs,
   gtmeInputs: defaultGTMEInputs,
+  eventInputs: defaultEventInputs,
   leadDetails: {
     fullName: "",
     companyName: "",
@@ -43,6 +49,7 @@ export const initialCalculatorState: CalculatorState = {
   },
   outboundResults: null,
   gtmeResults: null,
+  eventResults: null,
 };
 
 function calculatorReducer(state: CalculatorState, action: CalculatorAction): CalculatorState {
@@ -61,6 +68,11 @@ function calculatorReducer(state: CalculatorState, action: CalculatorAction): Ca
         ...state,
         gtmeInputs: { ...state.gtmeInputs, ...action.payload },
       };
+    case "UPDATE_EVENT_INPUTS":
+      return {
+        ...state,
+        eventInputs: { ...state.eventInputs, ...action.payload },
+      };
     case "SET_LEAD_DETAILS":
       return { ...state, leadDetails: action.payload };
     case "COMMIT_LEAD_DETAILS_TO_CONFIRMATION":
@@ -73,6 +85,8 @@ function calculatorReducer(state: CalculatorState, action: CalculatorAction): Ca
       return { ...state, outboundResults: action.payload };
     case "SET_GTME_RESULTS":
       return { ...state, gtmeResults: action.payload };
+    case "SET_EVENT_RESULTS":
+      return { ...state, eventResults: action.payload };
     case "RESET":
       return initialCalculatorState;
     default:

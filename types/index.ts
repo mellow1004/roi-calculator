@@ -4,3 +4,4 @@
  * `"results"`.
  */
 export * from "./calculator";
+export type { CampaignService, EventFormat, IndustryVertical } from "@/lib/formulas/event";

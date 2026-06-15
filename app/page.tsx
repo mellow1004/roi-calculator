@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * Flow conditions (from selectedServices):
+ * Flow conditions (see getFlowConditions in /lib/flowConditions.ts):
  * - hasOutbound = selectedServices includes any of: sdr-team, ae-team, event-lead-gen
+ * - hasEvent = selectedServices includes: event-lead-gen
  * - hasGTME = selectedServices includes: gtme
  * - isCombined = hasOutbound && hasGTME
  * - isOutboundOnly = hasOutbound && !hasGTME
@@ -18,10 +19,9 @@ import StepResults from "@/components/calculator/StepResults";
 import StepSelectServices from "@/components/calculator/StepSelectServices";
 import StepYourDetails from "@/components/calculator/StepYourDetails";
 import { CalculatorProvider, useCalculator } from "@/lib/calculatorStore";
+import { getFlowConditions } from "@/lib/flowConditions";
 import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 import type { CalculatorStep } from "@/types";
-
-const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
 
 function stepContent(step: CalculatorStep): React.JSX.Element {
   switch (step) {
@@ -47,11 +47,7 @@ function stepContent(step: CalculatorStep): React.JSX.Element {
 function CalculatorShell(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
 
-  const hasGTME = state.selectedServices.includes("gtme");
-  const hasOutbound = state.selectedServices.some((id) =>
-    (OUTBOUND_SERVICE_IDS as readonly string[]).includes(id)
-  );
-  const isOutboundOnly = hasOutbound && !hasGTME;
+  const { isOutboundOnly } = getFlowConditions(state.selectedServices);
 
   useEffect(() => {
     if (state.currentStep !== "performance" || !isOutboundOnly) {

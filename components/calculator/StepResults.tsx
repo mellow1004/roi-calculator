@@ -3,6 +3,7 @@
 /**
  * Flow conditions (from selectedServices):
  * - hasOutbound = selectedServices includes any of: sdr-team, ae-team, event-lead-gen
+ * - hasEvent = selectedServices includes: event-lead-gen
  * - hasGTME = selectedServices includes: gtme
  * - isCombined = hasOutbound && hasGTME
  * - isOutboundOnly = hasOutbound && !hasGTME
@@ -14,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import type { TooltipKey } from "@/constants/tooltips";
-import { formatCurrency } from "@/lib/formatCurrency";
+import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
 import { getGTMERoiLabel } from "@/lib/formulas/gtme";
 import {
   getCashFlowWarning,
@@ -22,7 +23,8 @@ import {
   outboundRoiLabelBadgeClassName,
 } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
-import type { Currency, GTMEResults, OutboundResults } from "@/types/calculator";
+import type { Currency, EventResults, GTMEResults, OutboundResults } from "@/types/calculator";
+import type { EventInputs } from "@/lib/formulas/event";
 
 function TooltipIcon({ tooltipKey }: { tooltipKey: TooltipKey }): React.JSX.Element {
   return <InfoTooltipTrigger tooltipKey={tooltipKey} className="ml-1" />;
@@ -92,6 +94,155 @@ function HorizontalBarRow({
           style={{ width: `${widthPct}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function ResultsSectionDivider({ label }: { label: string }): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-4 py-2">
+      <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
+      <p className="shrink-0 text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+        {label}
+      </p>
+      <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
+    </div>
+  );
+}
+
+function EventMetricTilesGrid({
+  eventResults,
+  eventCurrency,
+}: {
+  eventResults: EventResults;
+  eventCurrency: EventInputs["currency"];
+}): React.JSX.Element {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <MetricTile
+        label="New Clients"
+        value={String(eventResults.clients)}
+        tooltipKey="NEW_CLIENTS"
+        surfaceClassName="bg-[var(--color-blue-subtle)]"
+      />
+      <MetricTile
+        label="Campaign Cost"
+        value={formatEventCurrency(eventResults.campaignCost, eventCurrency)}
+        tooltipKey="EVENT_CAMPAIGN_COST"
+        surfaceClassName="bg-[var(--color-red-subtle)]"
+      />
+      <MetricTile
+        label="Cost per New Client"
+        value={formatEventCurrency(eventResults.costPerNewClient, eventCurrency)}
+        tooltipKey="COST_PER_ACQ"
+        surfaceClassName="bg-[var(--color-yellow-subtle)]"
+      />
+      <MetricTile
+        label="Revenue Multiple"
+        value={`${eventResults.revenueMultiple}x`}
+        tooltipKey="ROI"
+        surfaceClassName="bg-[var(--color-accent-light)]"
+      />
+    </div>
+  );
+}
+
+function EventFunnelCards({
+  signups,
+  attendees,
+  opportunities,
+  clients,
+}: {
+  signups: number;
+  attendees: number;
+  opportunities: number;
+  clients: number;
+}): React.JSX.Element {
+  const stages = [
+    { label: "Sign-ups", value: signups },
+    { label: "Attendees", value: attendees },
+    { label: "Opportunities", value: opportunities },
+    { label: "New Clients", value: clients },
+  ];
+
+  return (
+    <div className="calculator-card p-6 md:p-8">
+      <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+        Campaign performance funnel
+      </h3>
+      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+        Projected flow from sign-ups to closed clients.
+      </p>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch sm:justify-between">
+        {stages.map((stage, index) => (
+          <div key={stage.label} className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 flex-col rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[var(--color-text-secondary)]">
+                {stage.label}
+              </p>
+              <p className="font-display mt-1 text-2xl font-normal tabular-nums text-[var(--color-text-primary)]">
+                {stage.value.toLocaleString()}
+              </p>
+            </div>
+            {index < stages.length - 1 ? (
+              <span className="hidden shrink-0 text-lg text-[var(--color-text-secondary)] sm:inline" aria-hidden="true">
+                →
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EventResultsSection({
+  eventResults,
+  eventInputs,
+  showHero = true,
+}: {
+  eventResults: EventResults;
+  eventInputs: EventInputs;
+  showHero?: boolean;
+}): React.JSX.Element {
+  const currency = eventInputs.currency;
+  const netReturnFormatted = formatEventCurrency(eventResults.netReturn, currency);
+
+  return (
+    <div className="flex flex-col gap-8">
+      {showHero ? (
+        <div
+          className="rounded-2xl px-8 py-12 text-center text-white md:px-12 md:py-[48px]"
+          style={{
+            background: "linear-gradient(135deg, #0F3D24 0%, #1A5C38 100%)",
+          }}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">
+            NET RETURN
+          </p>
+          <p className="font-display mt-4 text-[48px] font-normal leading-none tracking-tight text-white sm:text-[56px] md:text-[64px]">
+            {netReturnFormatted}
+          </p>
+          <p className="mt-2 text-lg font-medium text-white/80">net return</p>
+          {eventResults.isBreakEven ? (
+            <p className="mt-6 text-base font-medium text-white/90">
+              {eventResults.roiMultiplier}× return on investment · {eventResults.roiPercentage}%
+            </p>
+          ) : (
+            <p className="mt-6 text-base font-medium text-[var(--color-amber)]">
+              Below break-even · −{Math.abs(eventResults.roiPercentage)}%
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <EventMetricTilesGrid eventResults={eventResults} eventCurrency={currency} />
+      <EventFunnelCards
+        signups={eventInputs.signupTarget}
+        attendees={eventResults.attendees}
+        opportunities={eventResults.opportunities}
+        clients={eventResults.clients}
+      />
     </div>
   );
 }
@@ -233,7 +384,8 @@ function InvestmentVsReturnCard({
 
 export default function StepResults(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
-  const { gtmeResults, outboundResults, gtmeInputs, outboundInputs } = state;
+  const { gtmeResults, outboundResults, eventResults, gtmeInputs, outboundInputs, eventInputs } =
+    state;
 
   const [pdfToastVisible, setPdfToastVisible] = useState(false);
 
@@ -275,13 +427,33 @@ export default function StepResults(): React.JSX.Element {
     };
   })();
 
-  const showCombinedResults = gtmeResults !== null && outboundResults !== null;
-  const showGtmeOnlyResults = gtmeResults !== null && outboundResults === null;
-  const showOutboundOnlyResults = outboundResults !== null && gtmeResults === null;
+  const hasEvent = eventResults !== null;
+  const hasOutbound = outboundResults !== null;
+  const hasGtme = gtmeResults !== null;
+  const hasAnyResults = hasEvent || hasOutbound || hasGtme;
+
+  const showEventOnly = hasEvent && !hasOutbound && !hasGtme;
+  const showClassicCombined = hasOutbound && hasGtme && !hasEvent;
+  const showGtmeOnlyResults = hasGtme && !hasOutbound && !hasEvent;
+  const showOutboundOnlyResults = hasOutbound && !hasGtme && !hasEvent;
+  const showMultiWithEvent = hasEvent && (hasOutbound || hasGtme) && !showEventOnly;
 
   return (
     <section className="relative mx-auto w-full pb-24">
-      {showCombinedResults && gtmeResults && outboundResults ? (
+      {showEventOnly && eventResults ? (
+        <div className="mb-8 flex flex-col gap-8 lg:mb-10">
+          <EventResultsSection eventResults={eventResults} eventInputs={eventInputs} />
+        </div>
+      ) : null}
+
+      {showMultiWithEvent && eventResults ? (
+        <div className="mb-8 flex flex-col gap-8 lg:mb-10">
+          <ResultsSectionDivider label="Event Lead Generation" />
+          <EventResultsSection eventResults={eventResults} eventInputs={eventInputs} />
+        </div>
+      ) : null}
+
+      {showClassicCombined && gtmeResults && outboundResults ? (
         <div className="mb-8 flex flex-col gap-8 lg:mb-10 lg:gap-10">
           <div
             className="rounded-2xl px-6 py-10 text-white md:px-12 md:py-12"
@@ -458,7 +630,162 @@ export default function StepResults(): React.JSX.Element {
         </div>
       ) : null}
 
-      {!gtmeResults && !outboundResults ? (
+      {showMultiWithEvent && hasOutbound && !hasGtme && outboundResults ? (
+        <div className="mb-8 flex flex-col gap-8 lg:mb-10">
+          {hasEvent ? <ResultsSectionDivider label="Outbound" /> : null}
+          <div
+            className="rounded-2xl px-8 py-12 text-center text-white md:px-12 md:py-[48px]"
+            style={{
+              background: "linear-gradient(135deg, #0F3D24 0%, #1A5C38 100%)",
+            }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">
+              YOUR PROJECTED ROI
+            </p>
+            <p className="font-display mt-6 text-[80px] font-normal leading-none tracking-tight text-white">
+              {outboundResults.roi}x
+            </p>
+            <p
+              className={[
+                "mt-6 inline-block rounded-full px-3.5 py-1 text-sm font-medium",
+                outboundRoiLabelBadgeClassName(getRoiLabel(outboundResults.roi)),
+              ].join(" ")}
+            >
+              {getRoiLabel(outboundResults.roi)}
+            </p>
+          </div>
+          <OutboundMetricTilesGrid
+            outboundResults={outboundResults}
+            outboundCurrency={outboundCurrency}
+          />
+          {!outboundResults.cashFlowYear1Positive ? (
+            <div
+              className="rounded-lg border border-[var(--color-border)] py-3 pl-4 pr-4 text-sm text-[var(--color-text-primary)]"
+              style={{
+                borderLeftWidth: "4px",
+                borderLeftColor: "var(--color-amber)",
+                background: "#FFFBEB",
+              }}
+            >
+              {getCashFlowWarning(
+                outboundResults.cashFlowYear1Positive,
+                outboundResults.cac,
+                outboundResults.arr,
+                outboundCurrency
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showMultiWithEvent && hasGtme && gtmeResults && !hasOutbound ? (
+        <div className="mb-8 flex flex-col gap-8 lg:mb-10 lg:gap-10">
+          <ResultsSectionDivider label="GTM Engineering" />
+          <div
+            className="rounded-2xl px-8 py-12 text-center text-white md:px-12 md:py-[48px]"
+            style={{
+              background: "linear-gradient(135deg, #0F3D24 0%, #1A5C38 100%)",
+            }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">
+              YOUR PROJECTED ROI
+            </p>
+            <p className="font-display mt-6 text-[80px] font-normal leading-none tracking-tight text-white">
+              {gtmeResults.roi}%
+            </p>
+            <p className="mt-6 inline-block rounded-full bg-white/15 px-3.5 py-1 text-sm font-medium text-white">
+              {getGTMERoiLabel(gtmeResults.roi)}
+            </p>
+          </div>
+          <GtmeMetricTilesGrid gtmeResults={gtmeResults} gtmeCurrency={gtmeCurrency} />
+          {investmentBarsGtmeOnly ? (
+            <div className="calculator-card p-6 md:p-8">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+                Investment vs. return
+              </h3>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                Bar lengths are proportional to each amount (scaled to the largest value).
+              </p>
+              <div className="mt-8 flex flex-col gap-8">
+                <HorizontalBarRow
+                  label="Campaign cost"
+                  valueText={formatCurrency(investmentBarsGtmeOnly.cost, gtmeCurrency)}
+                  percent={investmentBarsGtmeOnly.costPct}
+                  barClassName="bg-[#B91C1C]"
+                />
+                <HorizontalBarRow
+                  label="Projected revenue"
+                  valueText={formatCurrency(investmentBarsGtmeOnly.projected, gtmeCurrency)}
+                  percent={investmentBarsGtmeOnly.projectedPct}
+                  barClassName="bg-[#2563EB]"
+                />
+                <HorizontalBarRow
+                  label="Lifetime revenue"
+                  valueText={formatCurrency(investmentBarsGtmeOnly.lifetime, gtmeCurrency)}
+                  percent={investmentBarsGtmeOnly.lifetimePct}
+                  barClassName="bg-[var(--color-accent)]"
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showMultiWithEvent && hasOutbound && hasGtme && outboundResults && gtmeResults ? (
+        <div className="mb-8 flex flex-col gap-8 lg:mb-10 lg:gap-10">
+          <ResultsSectionDivider label="Outbound & GTM Engineering" />
+          <div
+            className="rounded-2xl px-6 py-10 text-white md:px-12 md:py-12"
+            style={{
+              background: "linear-gradient(135deg, #0F3D24 0%, #1A5C38 100%)",
+            }}
+          >
+            <p className="text-center text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">
+              YOUR PROJECTED ROI
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-10 md:grid-cols-2 md:gap-0 md:divide-x md:divide-white/20">
+              <div className="flex flex-col items-center px-2 text-center md:pr-8">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-white/70">
+                  Outbound ROI
+                </p>
+                <p className="font-display mt-3 text-[56px] font-normal leading-none tracking-tight text-white sm:text-[64px] md:text-[72px]">
+                  {outboundResults.roi}x
+                </p>
+              </div>
+              <div className="flex flex-col items-center px-2 text-center md:pl-8">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-white/70">
+                  GTM Engineering ROI
+                </p>
+                <p className="font-display mt-3 text-[56px] font-normal leading-none tracking-tight text-white sm:text-[64px] md:text-[72px]">
+                  {gtmeResults.roi}%
+                </p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+              GTM Engineering
+            </h3>
+            <GtmeMetricTilesGrid gtmeResults={gtmeResults} gtmeCurrency={gtmeCurrency} />
+          </div>
+          <div>
+            <h3 className="mb-4 text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+              Outbound
+            </h3>
+            <OutboundMetricTilesGrid
+              outboundResults={outboundResults}
+              outboundCurrency={outboundCurrency}
+            />
+          </div>
+          <InvestmentVsReturnCard
+            gtmeResults={gtmeResults}
+            gtmeInputs={gtmeInputs}
+            gtmeCurrency={gtmeCurrency}
+          />
+        </div>
+      ) : null}
+
+      {!hasAnyResults ? (
         <p className="calculator-card border-dashed p-10 text-center text-[var(--color-text-secondary)]">
           No saved results to display yet. Go back through the calculator to generate your ROI
           report.

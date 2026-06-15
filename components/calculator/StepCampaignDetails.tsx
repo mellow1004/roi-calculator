@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * Flow conditions (from selectedServices):
- * - hasOutbound = selectedServices includes any of: sdr-team, ae-team, event-lead-gen
- * - hasGTME = selectedServices includes: gtme
- * - isCombined = hasOutbound && hasGTME
- * - isOutboundOnly = hasOutbound && !hasGTME
- * - isGTMEOnly = hasGTME && !hasOutbound
+ * Flow conditions (see getFlowConditions in /lib/flowConditions.ts):
+ * - hasClassicOutbound = sdr-team or ae-team
+ * - hasEvent = event-lead-gen
+ * - hasGTME = gtme
  */
 
+import StepCampaignDetailsEvent from "@/components/calculator/StepCampaignDetailsEvent";
 import StepCampaignDetailsGTME from "@/components/calculator/StepCampaignDetailsGTME";
 import StepCampaignDetailsOutbound from "@/components/calculator/StepCampaignDetailsOutbound";
 import { useCalculator } from "@/lib/calculatorStore";
+import { getFlowConditions } from "@/lib/flowConditions";
+import { calculateEventResults } from "@/lib/formulas/event";
 import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
+import type { EventInputs } from "@/lib/formulas/event";
+import type { GTMEInputs } from "@/types/calculator";
 
-const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
 const INBOUND_SERVICE_IDS = [
   "performance-marketing",
   "content-marketing",
@@ -23,71 +25,178 @@ const INBOUND_SERVICE_IDS = [
   "channel-marketing",
 ] as const;
 
+function ServiceDivider({ label }: { label: string }): React.JSX.Element {
+  return (
+    <div className="my-12 flex items-center gap-4">
+      <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
+      <p className="shrink-0 text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
+        {label}
+      </p>
+      <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
+    </div>
+  );
+}
+
+function CombinedFooter({
+  onBack,
+  onNext,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+}): React.JSX.Element {
+  return (
+    <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-between">
+      <button type="button" onClick={onBack} className="btn-ghost w-full sm:w-auto calculator-interactive">
+        ← Back
+      </button>
+      <button type="button" onClick={onNext} className="btn-primary w-full sm:w-auto calculator-interactive">
+        Next step →
+      </button>
+    </div>
+  );
+}
+
+function snapshotEventInputs(eventInputs: EventInputs): Partial<EventInputs> {
+  return {
+    eventFormat: eventInputs.eventFormat,
+    industryVertical: eventInputs.industryVertical,
+    campaignService: eventInputs.campaignService,
+    currency: eventInputs.currency,
+    signupTarget: eventInputs.signupTarget,
+    budgetPerSignup: eventInputs.budgetPerSignup,
+    averageNewClientROI: eventInputs.averageNewClientROI,
+  };
+}
+
+function snapshotGtmeCampaignInputs(gtmeInputs: GTMEInputs): Partial<GTMEInputs> {
+  return {
+    currency: gtmeInputs.currency,
+    totalBudget: gtmeInputs.totalBudget,
+    averageDealSize: gtmeInputs.averageDealSize,
+    durationMonths: gtmeInputs.durationMonths,
+  };
+}
+
 export default function StepCampaignDetails(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
-  const { selectedServices, outboundInputs, gtmeInputs } = state;
+  const { selectedServices, outboundInputs, gtmeInputs, eventInputs } = state;
 
-  const hasOutbound = selectedServices.some((id) =>
-    (OUTBOUND_SERVICE_IDS as readonly string[]).includes(id)
-  );
-  const hasGTME = selectedServices.includes("gtme");
-  const isCombined = hasOutbound && hasGTME;
-  const isOutboundOnly = hasOutbound && !hasGTME;
-  const isGTMEOnly = hasGTME && !hasOutbound;
+  const {
+    hasClassicOutbound,
+    hasEvent,
+    isCombined,
+    isEventOnly,
+    isEventOutboundCombined,
+    isEventGtmeCombined,
+    isTripleCombined,
+    isOutboundOnly,
+    isGTMEOnly,
+  } = getFlowConditions(selectedServices);
+
   const hasInbound = selectedServices.some((id) =>
     (INBOUND_SERVICE_IDS as readonly string[]).includes(id)
   );
-  const isInboundOnly = hasInbound && !hasOutbound && !hasGTME;
+  const isInboundOnly = hasInbound && !hasClassicOutbound && !hasEvent && !state.selectedServices.includes("gtme");
 
-  const handleCombinedNext = (): void => {
+  const goBack = (): void => {
+    dispatch({ type: "SET_STEP", payload: "select-services" });
+  };
+
+  const saveEventResults = (): void => {
+    const computed = calculateEventResults(eventInputs);
+    dispatch({ type: "UPDATE_EVENT_INPUTS", payload: snapshotEventInputs(eventInputs) });
+    dispatch({ type: "SET_EVENT_RESULTS", payload: computed });
+  };
+
+  const saveOutboundResults = (): void => {
     const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-    const outboundComputed = calculateOutboundResults(outboundInputs, costPerMeeting);
-    dispatch({ type: "SET_OUTBOUND_RESULTS", payload: outboundComputed });
     dispatch({
-      type: "UPDATE_GTME_INPUTS",
-      payload: {
-        currency: gtmeInputs.currency,
-        totalBudget: gtmeInputs.totalBudget,
-        averageDealSize: gtmeInputs.averageDealSize,
-        durationMonths: gtmeInputs.durationMonths,
-      },
+      type: "SET_OUTBOUND_RESULTS",
+      payload: calculateOutboundResults(outboundInputs, costPerMeeting),
     });
+  };
+
+  const saveGtmeCampaignInputs = (): void => {
+    dispatch({ type: "UPDATE_GTME_INPUTS", payload: snapshotGtmeCampaignInputs(gtmeInputs) });
+  };
+
+  const goToPerformance = (): void => {
     dispatch({ type: "SET_STEP", payload: "performance" });
   };
+
+  const handleClassicCombinedNext = (): void => {
+    saveOutboundResults();
+    saveGtmeCampaignInputs();
+    goToPerformance();
+  };
+
+  const handleEventOutboundCombinedNext = (): void => {
+    saveOutboundResults();
+    saveEventResults();
+    goToPerformance();
+  };
+
+  const handleEventGtmeCombinedNext = (): void => {
+    saveEventResults();
+    saveGtmeCampaignInputs();
+    goToPerformance();
+  };
+
+  const handleTripleCombinedNext = (): void => {
+    saveOutboundResults();
+    saveEventResults();
+    saveGtmeCampaignInputs();
+    goToPerformance();
+  };
+
+  if (isTripleCombined) {
+    return (
+      <div className="mx-auto w-full max-w-6xl">
+        <StepCampaignDetailsOutbound hideNavigation />
+        <ServiceDivider label="Event Lead Generation" />
+        <StepCampaignDetailsEvent hideNavigation />
+        <ServiceDivider label="GTM Engineering" />
+        <StepCampaignDetailsGTME hideNavigation />
+        <CombinedFooter onBack={goBack} onNext={handleTripleCombinedNext} />
+      </div>
+    );
+  }
 
   if (isCombined) {
     return (
       <div className="mx-auto w-full max-w-6xl">
         <StepCampaignDetailsOutbound hideNavigation />
-
-        <div className="my-12 flex items-center gap-4">
-          <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
-          <p className="shrink-0 text-[13px] font-bold uppercase tracking-[0.1em] text-[var(--color-text-secondary)]">
-            GTM Engineering
-          </p>
-          <div className="h-px flex-1 bg-[var(--color-border)]" aria-hidden="true" />
-        </div>
-
+        <ServiceDivider label="GTM Engineering" />
         <StepCampaignDetailsGTME hideNavigation />
-
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            onClick={() => dispatch({ type: "SET_STEP", payload: "select-services" })}
-            className="btn-ghost w-full sm:w-auto calculator-interactive"
-          >
-            ← Back
-          </button>
-          <button
-            type="button"
-            onClick={handleCombinedNext}
-            className="btn-primary w-full sm:w-auto calculator-interactive"
-          >
-            Next step →
-          </button>
-        </div>
+        <CombinedFooter onBack={goBack} onNext={handleClassicCombinedNext} />
       </div>
     );
+  }
+
+  if (isEventOutboundCombined) {
+    return (
+      <div className="mx-auto w-full max-w-6xl">
+        <StepCampaignDetailsOutbound hideNavigation />
+        <ServiceDivider label="Event Lead Generation" />
+        <StepCampaignDetailsEvent hideNavigation />
+        <CombinedFooter onBack={goBack} onNext={handleEventOutboundCombinedNext} />
+      </div>
+    );
+  }
+
+  if (isEventGtmeCombined) {
+    return (
+      <div className="mx-auto w-full max-w-6xl">
+        <StepCampaignDetailsEvent hideNavigation />
+        <ServiceDivider label="GTM Engineering" />
+        <StepCampaignDetailsGTME hideNavigation />
+        <CombinedFooter onBack={goBack} onNext={handleEventGtmeCombinedNext} />
+      </div>
+    );
+  }
+
+  if (isEventOnly) {
+    return <StepCampaignDetailsEvent />;
   }
 
   if (isOutboundOnly) {
@@ -123,7 +232,7 @@ export default function StepCampaignDetails(): React.JSX.Element {
           </a>
           <button
             type="button"
-            onClick={() => dispatch({ type: "SET_STEP", payload: "select-services" })}
+            onClick={goBack}
             className="border-0 bg-transparent text-sm text-[var(--color-text-secondary)] calculator-interactive"
           >
             ← Choose different services
