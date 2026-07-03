@@ -66,17 +66,17 @@ export const tooltips = {
   CAMPAIGN_SERVICE:
     "Pre + Post-event covers sign-up recruitment and follow-up calling after the event. Pre-event only covers recruitment — no post-event outreach.",
 
-  EVENT_SIGNUP_TARGET: "How many event sign-ups you want Brightvision to deliver for this campaign.",
-
-  EVENT_BUDGET_PER_SIGNUP: "What you are willing to spend per delivered sign-up, including recruitment costs.",
+  EVENT_TOTAL_BUDGET:
+    "Your total campaign investment with Brightvision, including recruitment, setup, and post-event calling where applicable.",
 
   EVENT_AVERAGE_CLIENT_ROI:
-    "The revenue you expect from one new client won through this event campaign.",
+    "The full revenue value of one new client won through this event campaign.",
 
   EVENT_NET_RETURN:
-    "Gross profit from new clients minus total campaign cost. Positive means the campaign pays back.",
+    "Revenue from new clients minus total campaign cost. Positive means the campaign pays back.",
 
-  EVENT_CAMPAIGN_COST: "Total investment including sign-up spend, setup fee, and post-event calling (if selected).",
+  EVENT_CAMPAIGN_COST:
+    "Your total campaign budget, including setup, sign-up recruitment, and post-event calling where applicable.",
 } as const;
 
 export type TooltipKey = keyof typeof tooltips;

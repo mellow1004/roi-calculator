@@ -14,11 +14,12 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import { EventBenchmarkDisclaimer } from "@/components/calculator/EventBenchmarkDisclaimer";
 import { LabelWithTooltip } from "@/components/calculator/Tooltip";
 import { useCalculator } from "@/lib/calculatorStore";
 import { getFlowConditions } from "@/lib/flowConditions";
 import { calculateGTMEResults, getGTMERoiLabel } from "@/lib/formulas/gtme";
-import { calculateEventResults } from "@/lib/formulas/event";
+import { calculateEventResults, formatEventRoiSummary } from "@/lib/formulas/event";
 import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
 import { CLASSIC_OUTBOUND_SERVICE_IDS } from "@/lib/flowConditions";
@@ -233,7 +234,7 @@ function EventConfirmationSummary(): React.JSX.Element {
   const currency = eventInputs.currency;
 
   const rows: Array<{ label: string; value: string }> = [
-    { label: "Sign-ups", value: eventInputs.signupTarget.toLocaleString() },
+    { label: "Sign-ups", value: results.signups.toLocaleString() },
     { label: "Attendees", value: results.attendees.toLocaleString() },
     { label: "New clients", value: results.clients.toLocaleString() },
     {
@@ -246,9 +247,7 @@ function EventConfirmationSummary(): React.JSX.Element {
     },
     {
       label: "ROI",
-      value: results.isBreakEven
-        ? `${results.roiMultiplier}× · ${results.roiPercentage}%`
-        : `Below break-even · −${Math.abs(results.roiPercentage)}%`,
+      value: formatEventRoiSummary(results),
     },
   ];
 
@@ -294,6 +293,10 @@ function EventConfirmationSummary(): React.JSX.Element {
             </div>
           ))}
         </dl>
+      </div>
+
+      <div className="mx-auto mt-4 max-w-xl">
+        <EventBenchmarkDisclaimer />
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">

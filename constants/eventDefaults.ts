@@ -5,7 +5,6 @@ export const defaultEventInputs: EventInputs = {
   industryVertical: "general-b2b",
   campaignService: "pre-post",
   currency: "EUR",
-  signupTarget: 250,
-  budgetPerSignup: 60,
-  averageNewClientROI: 12000,
+  totalBudget: 13200,
+  averageNewClientROI: 50000,
 };

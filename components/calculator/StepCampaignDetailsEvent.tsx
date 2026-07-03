@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { EventBenchmarkDisclaimer } from "@/components/calculator/EventBenchmarkDisclaimer";
 import { LabelWithTooltip, InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import { useCalculator } from "@/lib/calculatorStore";
 import { formatEventCurrency } from "@/lib/formatCurrency";
 import {
   calculateEventResults,
   convertEventAmount,
+  eventHoursPerSignup,
+  formatEventRoiSummary,
+  getEventHourlyRate,
+  getEventMinBudget,
+  isEventLossMaking,
   type CampaignService,
   type EventFormat,
   type EventInputs,
@@ -83,7 +89,9 @@ function FunnelFlow({
                 {stage.label}
               </p>
               <p className="font-display mt-0.5 text-lg font-normal tabular-nums text-white">
-                {stage.value.toLocaleString()}
+                {Number.isInteger(stage.value)
+                  ? stage.value.toLocaleString()
+                  : stage.value.toFixed(1)}
               </p>
             </div>
             {index < stages.length - 1 ? (
@@ -112,6 +120,12 @@ export default function StepCampaignDetailsEvent({
 
   const results = calculateEventResults(eventInputs);
   const sym = eventCurrencySymbol(eventInputs.currency);
+  const minBudget = getEventMinBudget(eventInputs.industryVertical, eventInputs.currency);
+  const hourlyRate = getEventHourlyRate(eventInputs.currency);
+  const industryLabel =
+    INDUSTRY_OPTIONS.find((opt) => opt.value === eventInputs.industryVertical)?.label ??
+    "Your industry";
+  const industryHours = eventHoursPerSignup[eventInputs.industryVertical];
 
   const inputClass =
     "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out focus:border-[var(--color-accent)] focus:outline-none focus:ring-[3px] focus:ring-[rgba(26,92,56,0.12)]";
@@ -129,14 +143,15 @@ export default function StepCampaignDetailsEvent({
       return;
     }
 
+    const nextMinBudget = getEventMinBudget(eventInputs.industryVertical, newCurrency);
+
     dispatch({
       type: "UPDATE_EVENT_INPUTS",
       payload: {
         currency: newCurrency,
-        budgetPerSignup: convertEventAmount(
-          eventInputs.budgetPerSignup,
-          previousCurrency,
-          newCurrency
+        totalBudget: Math.max(
+          nextMinBudget,
+          convertEventAmount(eventInputs.totalBudget, previousCurrency, newCurrency)
         ),
         averageNewClientROI: convertEventAmount(
           eventInputs.averageNewClientROI,
@@ -157,8 +172,7 @@ export default function StepCampaignDetailsEvent({
         industryVertical: eventInputs.industryVertical,
         campaignService: eventInputs.campaignService,
         currency: eventInputs.currency,
-        signupTarget: eventInputs.signupTarget,
-        budgetPerSignup: eventInputs.budgetPerSignup,
+        totalBudget: eventInputs.totalBudget,
         averageNewClientROI: eventInputs.averageNewClientROI,
       },
     });
@@ -209,12 +223,17 @@ export default function StepCampaignDetailsEvent({
             <select
               id="event-industry"
               value={eventInputs.industryVertical}
-              onChange={(e) =>
+              onChange={(e) => {
+                const industryVertical = e.target.value as IndustryVertical;
+                const nextMinBudget = getEventMinBudget(industryVertical, eventInputs.currency);
                 dispatch({
                   type: "UPDATE_EVENT_INPUTS",
-                  payload: { industryVertical: e.target.value as IndustryVertical },
-                })
-              }
+                  payload: {
+                    industryVertical,
+                    totalBudget: Math.max(eventInputs.totalBudget, nextMinBudget),
+                  },
+                });
+              }}
               className={inputClass}
             >
               {INDUSTRY_OPTIONS.map((opt) => (
@@ -223,6 +242,14 @@ export default function StepCampaignDetailsEvent({
                 </option>
               ))}
             </select>
+            <div
+              className="mt-3 rounded-lg bg-[var(--color-green-subtle)] px-3.5 py-2.5 text-[13px] leading-snug text-[var(--color-text-primary)]"
+            >
+              Cost per sign-up is calculated automatically based on your industry. {industryLabel}{" "}
+              campaigns typically require {industryHours} hours per sign-up at{" "}
+              {formatEventCurrency(hourlyRate, eventInputs.currency)}/hr ={" "}
+              {formatEventCurrency(results.costPerSignup, eventInputs.currency)}.
+            </div>
           </div>
 
           <div>
@@ -275,71 +302,44 @@ export default function StepCampaignDetailsEvent({
 
           <div>
             <label
-              htmlFor="event-signup-target"
+              htmlFor="event-total-budget"
               className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
             >
-              <LabelWithTooltip tooltipKey="EVENT_SIGNUP_TARGET">Sign-up target</LabelWithTooltip>
-            </label>
-            <input
-              id="event-signup-target"
-              type="number"
-              min={25}
-              max={2000}
-              step={1}
-              value={eventInputs.signupTarget || ""}
-              onChange={(e) =>
-                dispatch({
-                  type: "UPDATE_EVENT_INPUTS",
-                  payload: {
-                    signupTarget: Math.min(2000, Math.max(25, Number(e.target.value) || 25)),
-                  },
-                })
-              }
-              className={inputClass}
-            />
-            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-              How many event sign-ups you want to deliver
-            </p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="event-budget-per-signup"
-              className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
-            >
-              <LabelWithTooltip tooltipKey="EVENT_BUDGET_PER_SIGNUP">Budget per sign-up</LabelWithTooltip>
+              <LabelWithTooltip tooltipKey="EVENT_TOTAL_BUDGET">Total campaign budget</LabelWithTooltip>
             </label>
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
                 {sym}
               </span>
               <input
-                id="event-budget-per-signup"
+                id="event-total-budget"
                 type="number"
-                min={0}
-                step={1}
-                value={eventInputs.budgetPerSignup || ""}
+                min={minBudget}
+                step={500}
+                value={eventInputs.totalBudget || ""}
                 onChange={(e) =>
                   dispatch({
                     type: "UPDATE_EVENT_INPUTS",
-                    payload: { budgetPerSignup: Number(e.target.value) || 0 },
+                    payload: {
+                      totalBudget: Math.max(minBudget, Number(e.target.value) || minBudget),
+                    },
                   })
                 }
                 className={`${inputClass} pl-10`}
               />
             </div>
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-              What you&apos;re willing to spend per delivered sign-up
+              Your total investment for this campaign
             </p>
           </div>
 
           <div>
             <label
-              htmlFor="event-average-client-roi"
+              htmlFor="event-average-client-value"
               className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]"
             >
               <LabelWithTooltip tooltipKey="EVENT_AVERAGE_CLIENT_ROI">
-                Average new client ROI
+                Average new client value
               </LabelWithTooltip>
             </label>
             <div className="relative">
@@ -347,7 +347,7 @@ export default function StepCampaignDetailsEvent({
                 {sym}
               </span>
               <input
-                id="event-average-client-roi"
+                id="event-average-client-value"
                 type="number"
                 min={0}
                 step={500}
@@ -372,17 +372,33 @@ export default function StepCampaignDetailsEvent({
           <p className="mt-1 text-sm text-white/60">Updates as you adjust inputs.</p>
 
           <dl className="mt-6 space-y-4">
-            <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
-              <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                Sign-ups
-              </dt>
-              <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                {eventInputs.signupTarget.toLocaleString()}
-              </dd>
+            <div className="border-b border-white/10 pb-3">
+              <div className="flex justify-between gap-4">
+                <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+                  Cost / sign-up
+                </dt>
+                <dd className="font-display text-2xl font-normal tabular-nums text-white">
+                  {formatEventCurrency(results.costPerSignup, eventInputs.currency)}
+                </dd>
+              </div>
+              <p className="mt-1 text-[11px] text-white/45">
+                Calculated automatically based on industry
+              </p>
+            </div>
+            <div className="border-b border-white/10 pb-3">
+              <div className="flex justify-between gap-4">
+                <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+                  Sign-ups
+                </dt>
+                <dd className="font-display text-2xl font-normal tabular-nums text-white">
+                  {results.signups.toLocaleString()}
+                </dd>
+              </div>
+              <p className="mt-1 text-[11px] text-white/45">Based on your budget</p>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                Est. attendees
+                Attendees
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {results.attendees.toLocaleString()}
@@ -401,7 +417,9 @@ export default function StepCampaignDetailsEvent({
                 New clients
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                {results.clients.toLocaleString()}
+                {Number.isInteger(results.clients)
+                  ? results.clients.toLocaleString()
+                  : results.clients.toFixed(1)}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
@@ -440,20 +458,23 @@ export default function StepCampaignDetailsEvent({
                 ROI
                 <InfoTooltipTrigger tooltipKey="ROI" iconVariant="dark" className="normal-case" />
               </dt>
-              <dd className="text-right font-display text-xl font-normal tabular-nums text-white">
-                {results.isBreakEven ? (
-                  <>
-                    {results.roiMultiplier}× · {results.roiPercentage}%
-                  </>
-                ) : (
-                  <>Below break-even · −{Math.abs(results.roiPercentage)}%</>
-                )}
+              <dd
+                className={[
+                  "text-right font-display text-xl font-normal tabular-nums",
+                  isEventLossMaking(results.netReturn) ? "text-[#FCA5A5]" : "text-white",
+                ].join(" ")}
+              >
+                {formatEventRoiSummary(results)}
               </dd>
             </div>
           </dl>
 
+          <div className="mt-4">
+            <EventBenchmarkDisclaimer compact />
+          </div>
+
           <FunnelFlow
-            signups={eventInputs.signupTarget}
+            signups={results.signups}
             attendees={results.attendees}
             opportunities={results.opportunities}
             clients={results.clients}

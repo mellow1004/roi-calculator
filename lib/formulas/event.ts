@@ -16,12 +16,12 @@ export interface EventInputs {
   industryVertical: IndustryVertical;
   campaignService: CampaignService;
   currency: "EUR" | "USD" | "GBP" | "SEK" | "NOK" | "DKK";
-  signupTarget: number;
-  budgetPerSignup: number;
+  totalBudget: number;
   averageNewClientROI: number;
 }
 
 export interface EventResults {
+  signups: number;
   attendees: number;
   reached: number;
   opportunities: number;
@@ -45,7 +45,6 @@ const webinarBase = {
   reachRate: 0.65,
   opportunityRate: 0.18,
   closeRate: 0.2,
-  grossMargin: 0.7,
   setupFee: 1250,
   postCallCost: 35,
 };
@@ -55,7 +54,6 @@ const physicalBase = {
   reachRate: 0.75,
   opportunityRate: 0.24,
   closeRate: 0.24,
-  grossMargin: 0.7,
   setupFee: 1250,
   postCallCost: 35,
 };
@@ -80,6 +78,22 @@ const industryMultipliers: Record<
   other: { attendance: 1.0, reach: 1.0, opportunity: 1.0, close: 1.0 },
 };
 
+const hoursPerSignup: Record<IndustryVertical, number> = {
+  "general-b2b": 7,
+  "saas-tech": 6,
+  "professional-services": 7,
+  "finance-insurance": 9,
+  "healthcare-pharma": 10,
+  "manufacturing-industrial-retail": 8,
+  other: 7,
+};
+
+export const EVENT_HOURLY_RATE_EUR = 60;
+export const EVENT_SETUP_FEE_EUR = 1250;
+export const eventHoursPerSignup = hoursPerSignup;
+
+const HOURLY_RATE_EUR = EVENT_HOURLY_RATE_EUR;
+
 export const eventExchangeRates: Record<EventInputs["currency"], number> = {
   EUR: 1,
   USD: 1.08,
@@ -100,8 +114,128 @@ export function convertEventAmount(
   return Math.round((amount / fromRate) * toRate);
 }
 
+export function getEventHourlyRate(currency: EventInputs["currency"]): number {
+  return HOURLY_RATE_EUR * eventExchangeRates[currency];
+}
+
+export function getEventSetupFee(currency: EventInputs["currency"]): number {
+  return webinarBase.setupFee * eventExchangeRates[currency];
+}
+
+export function getEventCostPerSignup(
+  industryVertical: IndustryVertical,
+  currency: EventInputs["currency"]
+): number {
+  return Math.round(getEventHourlyRate(currency) * hoursPerSignup[industryVertical]);
+}
+
+/** Minimum total budget for at least 25 sign-ups (setup fee + 25 × cost per sign-up). */
+export function getEventMinBudget(
+  industryVertical: IndustryVertical,
+  currency: EventInputs["currency"]
+): number {
+  const setupFee = getEventSetupFee(currency);
+  const costPerSignup = getEventCostPerSignup(industryVertical, currency);
+  return Math.round(setupFee + costPerSignup * 25);
+}
+
 function roundWhole(value: number): number {
   return Math.round(value);
+}
+
+function roundClients(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function walkFunnelRounded(
+  signups: number,
+  rates: {
+    attendanceRate: number;
+    reachRate: number;
+    opportunityRate: number;
+    closeRate: number;
+  }
+): {
+  signups: number;
+  attendees: number;
+  reached: number;
+  opportunities: number;
+  clients: number;
+} {
+  const signupsForFunnel = Math.floor(signups);
+  const attendees = Math.round(signupsForFunnel * rates.attendanceRate);
+  const reached = Math.round(attendees * rates.reachRate);
+  const opportunities = Math.round(reached * rates.opportunityRate);
+  const clients = roundClients(opportunities * rates.closeRate);
+
+  return { signups: signupsForFunnel, attendees, reached, opportunities, clients };
+}
+
+function signupsFromBudget(
+  recruitmentBudget: number,
+  costPerSignup: number
+): number {
+  if (costPerSignup <= 0 || recruitmentBudget <= 0) {
+    return 0;
+  }
+  return recruitmentBudget / costPerSignup;
+}
+
+export type EventRoiLabel = "Strong return" | "Good return" | "Break-even" | "Below break-even";
+
+/** Classifies event ROI from net return relative to total campaign cost. */
+export function getEventRoiLabel(netReturn: number, campaignCost: number): EventRoiLabel {
+  if (campaignCost <= 0) {
+    return netReturn >= 0 ? "Good return" : "Below break-even";
+  }
+  if (netReturn >= campaignCost) {
+    return "Strong return";
+  }
+  if (netReturn >= 0) {
+    return "Good return";
+  }
+  if (netReturn >= -campaignCost * 0.2) {
+    return "Break-even";
+  }
+  return "Below break-even";
+}
+
+/** Formats the ROI line shown in event calculator summaries. */
+export function formatEventRoiSummary(results: {
+  netReturn: number;
+  campaignCost: number;
+  roiMultiplier: number;
+  roiPercentage: number;
+}): string {
+  const label = getEventRoiLabel(results.netReturn, results.campaignCost);
+
+  if (label === "Below break-even") {
+    return `Below break-even · −${Math.abs(results.roiPercentage)}%`;
+  }
+
+  if (label === "Break-even") {
+    return `Break-even · ${results.roiPercentage}%`;
+  }
+
+  return `${results.roiMultiplier}× · ${results.roiPercentage}%`;
+}
+
+export function isEventLossMaking(netReturn: number): boolean {
+  return netReturn < 0;
+}
+
+function logEventCalculationBreakdown(
+  inputs: EventInputs,
+  breakdown: Record<string, unknown>
+): void {
+  if (process.env.NODE_ENV !== "development") {
+    return;
+  }
+
+  console.log("[Event ROI] calculation breakdown", {
+    inputs,
+    ...breakdown,
+  });
 }
 
 /**
@@ -121,54 +255,96 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
 
   /** Step 3 — Apply industry multipliers, capping each rate at 100%. */
   const multiplier = industryMultipliers[inputs.industryVertical];
-  const attendanceRate = Math.min(base.attendanceRate * multiplier.attendance, 1);
-  const reachRate = Math.min(base.reachRate * multiplier.reach, 1);
-  const opportunityRate = Math.min(base.opportunityRate * multiplier.opportunity, 1);
-  const closeRate = Math.min(base.closeRate * multiplier.close, 1);
-  const grossMargin = base.grossMargin;
+  const funnelRates = {
+    attendanceRate: Math.min(base.attendanceRate * multiplier.attendance, 1),
+    reachRate: Math.min(base.reachRate * multiplier.reach, 1),
+    opportunityRate: Math.min(base.opportunityRate * multiplier.opportunity, 1),
+    closeRate: Math.min(base.closeRate * multiplier.close, 1),
+  };
 
-  /** Step 4 — Convert EUR-based fixed costs to the selected currency. */
+  /** Step 4 — Convert EUR-based fixed costs and hourly rate to the selected currency. */
   const currencyRate = eventExchangeRates[inputs.currency];
   const setupFee = base.setupFee * currencyRate;
   const postCallCost = base.postCallCost * currencyRate;
+  const hourlyRate = HOURLY_RATE_EUR * currencyRate;
+  const costPerSignup = hourlyRate * hoursPerSignup[inputs.industryVertical];
+  const campaignCost = inputs.totalBudget;
 
-  /** Step 5 — Walk down the funnel from signups to clients. */
-  const attendees = inputs.signupTarget * attendanceRate;
-  const reached = attendees * reachRate;
-  const opportunities = reached * opportunityRate;
-  const clients = opportunities * closeRate;
+  let signupsRaw = 0;
+  let postEventCost = 0;
+  let funnel = walkFunnelRounded(0, funnelRates);
 
-  /** Step 6 — Compute pre-event, post-event, and total campaign cost. */
-  const preEventCost = inputs.signupTarget * inputs.budgetPerSignup + setupFee;
-  const postEventCost =
-    inputs.campaignService === "pre-post" ? reached * postCallCost : 0;
-  const campaignCost = preEventCost + postEventCost;
+  if (inputs.campaignService === "pre-only") {
+    /** Step 5a — Pre-event only: signups derived from total budget minus setup fee. */
+    signupsRaw = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+    postEventCost = 0;
+    funnel = walkFunnelRounded(signupsRaw, funnelRates);
+  } else {
+    /** Step 5b — Pre + post: reserve post-event calling from an estimated funnel walk. */
+    const estimatedSignups = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+    const estimatedFunnel = walkFunnelRounded(estimatedSignups, funnelRates);
+    const reservedPostEventCost = estimatedFunnel.reached * postCallCost;
+    signupsRaw = signupsFromBudget(
+      inputs.totalBudget - setupFee - reservedPostEventCost,
+      costPerSignup
+    );
+    funnel = walkFunnelRounded(signupsRaw, funnelRates);
+    postEventCost = funnel.reached * postCallCost;
+  }
 
-  /** Step 7 — Revenue and gross profit from closed clients. */
+  const { signups, attendees, reached, opportunities, clients } = funnel;
+
+  /** Step 6 — Pre-event spend is total budget minus post-event calling. */
+  const preEventCost = campaignCost - postEventCost;
+
+  /** Step 7 — Revenue equals full client value (no gross margin haircut). */
   const revenue = clients * inputs.averageNewClientROI;
-  const grossProfit = revenue * grossMargin;
+  const grossProfit = revenue;
 
   /** Step 8 — Headline ROI metrics (net return, multiplier, percentage, break-even). */
-  const netReturn = grossProfit - campaignCost;
+  const netReturn = revenue - campaignCost;
+  const roiLabel = getEventRoiLabel(netReturn, campaignCost);
   const roiMultiplier =
-    campaignCost > 0
+    netReturn >= 0 && campaignCost > 0
       ? Math.round((1 + netReturn / campaignCost) * 10) / 10
       : 0;
   const roiPercentage =
     campaignCost > 0 ? Math.round((netReturn / campaignCost) * 100) : 0;
   const isBreakEven = netReturn >= 0;
 
-  /** Step 9 — Sales efficiency metrics (cost per signup/client, revenue multiple). */
-  const costPerSignup =
-    inputs.signupTarget > 0 ? campaignCost / inputs.signupTarget : 0;
+  /** Step 9 — Sales efficiency metrics. */
   const costPerNewClient = clients > 0 ? campaignCost / clients : 0;
   const revenueMultiple = campaignCost > 0 ? revenue / campaignCost : 0;
 
+  logEventCalculationBreakdown(inputs, {
+    campaignService: inputs.campaignService,
+    funnelRates,
+    setupFee,
+    hourlyRate,
+    costPerSignup,
+    signupsRaw,
+    signups,
+    attendees,
+    reached,
+    opportunities,
+    clients,
+    postEventCost,
+    preEventCost,
+    revenue,
+    grossProfit,
+    netReturn,
+    roiLabel,
+    roiMultiplier,
+    roiPercentage,
+    isBreakEven,
+  });
+
   return {
-    attendees: roundWhole(attendees),
-    reached: roundWhole(reached),
-    opportunities: roundWhole(opportunities),
-    clients: roundWhole(clients),
+    signups,
+    attendees,
+    reached,
+    opportunities,
+    clients,
     preEventCost: roundWhole(preEventCost),
     postEventCost: roundWhole(postEventCost),
     campaignCost: roundWhole(campaignCost),

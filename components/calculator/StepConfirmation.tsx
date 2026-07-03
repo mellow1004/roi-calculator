@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
+import { formatEventRoiSummary } from "@/lib/formulas/event";
 import { useCalculator } from "@/lib/calculatorStore";
 
 function firstNameFromFullName(fullName: string): string {
@@ -38,9 +39,7 @@ export default function StepConfirmation(): React.JSX.Element {
         },
         {
           label: "ROI",
-          value: eventResults.isBreakEven
-            ? `${eventResults.roiMultiplier}× · ${eventResults.roiPercentage}%`
-            : `Below break-even · −${Math.abs(eventResults.roiPercentage)}%`,
+          value: formatEventRoiSummary(eventResults),
         },
       ];
     }

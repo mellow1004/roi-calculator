@@ -62,8 +62,7 @@ function snapshotEventInputs(eventInputs: EventInputs): Partial<EventInputs> {
     industryVertical: eventInputs.industryVertical,
     campaignService: eventInputs.campaignService,
     currency: eventInputs.currency,
-    signupTarget: eventInputs.signupTarget,
-    budgetPerSignup: eventInputs.budgetPerSignup,
+    totalBudget: eventInputs.totalBudget,
     averageNewClientROI: eventInputs.averageNewClientROI,
   };
 }

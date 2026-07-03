@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { EventBenchmarkDisclaimer } from "@/components/calculator/EventBenchmarkDisclaimer";
 import { InfoTooltipTrigger } from "@/components/calculator/Tooltip";
 import type { TooltipKey } from "@/constants/tooltips";
 import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
@@ -25,6 +26,7 @@ import {
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, EventResults, GTMEResults, OutboundResults } from "@/types/calculator";
 import type { EventInputs } from "@/lib/formulas/event";
+import { formatEventRoiSummary, isEventLossMaking } from "@/lib/formulas/event";
 
 function TooltipIcon({ tooltipKey }: { tooltipKey: TooltipKey }): React.JSX.Element {
   return <InfoTooltipTrigger tooltipKey={tooltipKey} className="ml-1" />;
@@ -147,6 +149,10 @@ function EventMetricTilesGrid({
   );
 }
 
+function formatEventFunnelValue(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1);
+}
+
 function EventFunnelCards({
   signups,
   attendees,
@@ -181,7 +187,7 @@ function EventFunnelCards({
                 {stage.label}
               </p>
               <p className="font-display mt-1 text-2xl font-normal tabular-nums text-[var(--color-text-primary)]">
-                {stage.value.toLocaleString()}
+                {formatEventFunnelValue(stage.value)}
               </p>
             </div>
             {index < stages.length - 1 ? (
@@ -220,29 +226,38 @@ function EventResultsSection({
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-white/60">
             NET RETURN
           </p>
-          <p className="font-display mt-4 text-[48px] font-normal leading-none tracking-tight text-white sm:text-[56px] md:text-[64px]">
+          <p
+            className={[
+              "font-display mt-4 text-[48px] font-normal leading-none tracking-tight sm:text-[56px] md:text-[64px]",
+              isEventLossMaking(eventResults.netReturn) ? "text-[#FCA5A5]" : "text-white",
+            ].join(" ")}
+          >
             {netReturnFormatted}
           </p>
           <p className="mt-2 text-lg font-medium text-white/80">net return</p>
-          {eventResults.isBreakEven ? (
-            <p className="mt-6 text-base font-medium text-white/90">
-              {eventResults.roiMultiplier}× return on investment · {eventResults.roiPercentage}%
-            </p>
-          ) : (
-            <p className="mt-6 text-base font-medium text-[var(--color-amber)]">
-              Below break-even · −{Math.abs(eventResults.roiPercentage)}%
-            </p>
-          )}
+          <p
+            className={[
+              "mt-6 text-base font-medium",
+              isEventLossMaking(eventResults.netReturn)
+                ? "text-[var(--color-amber)]"
+                : "text-white/90",
+            ].join(" ")}
+          >
+            {isEventLossMaking(eventResults.netReturn)
+              ? formatEventRoiSummary(eventResults)
+              : `${eventResults.roiMultiplier}× return on investment · ${eventResults.roiPercentage}%`}
+          </p>
         </div>
       ) : null}
 
       <EventMetricTilesGrid eventResults={eventResults} eventCurrency={currency} />
       <EventFunnelCards
-        signups={eventInputs.signupTarget}
+        signups={eventResults.signups}
         attendees={eventResults.attendees}
         opportunities={eventResults.opportunities}
         clients={eventResults.clients}
       />
+      <EventBenchmarkDisclaimer />
     </div>
   );
 }
