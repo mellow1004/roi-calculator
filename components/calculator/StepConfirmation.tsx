@@ -32,7 +32,9 @@ export default function StepConfirmation(): React.JSX.Element {
           label: "Net Return",
           value: formatEventCurrency(eventResults.netReturn, eventCurrency),
         },
-        { label: "New Clients", value: String(eventResults.clients) },
+        { label: "New Clients", value: Number.isInteger(eventResults.clients)
+          ? String(eventResults.clients)
+          : String(Math.round(eventResults.clients * 100) / 100) },
         {
           label: "Campaign Cost",
           value: formatEventCurrency(eventResults.campaignCost, eventCurrency),

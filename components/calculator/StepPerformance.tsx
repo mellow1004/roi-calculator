@@ -236,7 +236,14 @@ function EventConfirmationSummary(): React.JSX.Element {
   const rows: Array<{ label: string; value: string }> = [
     { label: "Sign-ups", value: results.signups.toLocaleString() },
     { label: "Attendees", value: results.attendees.toLocaleString() },
-    { label: "New clients", value: results.clients.toLocaleString() },
+    {
+      label: "New clients",
+      value: Number.isInteger(results.clients)
+        ? results.clients.toLocaleString()
+        : (Math.round(results.clients * 100) / 100).toLocaleString(undefined, {
+            maximumFractionDigits: 2,
+          }),
+    },
     {
       label: "Campaign cost",
       value: formatEventCurrency(results.campaignCost, currency),

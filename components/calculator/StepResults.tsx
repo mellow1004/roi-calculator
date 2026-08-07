@@ -123,7 +123,7 @@ function EventMetricTilesGrid({
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <MetricTile
         label="New Clients"
-        value={String(eventResults.clients)}
+        value={formatEventFunnelValue(eventResults.clients)}
         tooltipKey="NEW_CLIENTS"
         surfaceClassName="bg-[var(--color-blue-subtle)]"
       />
@@ -150,7 +150,14 @@ function EventMetricTilesGrid({
 }
 
 function formatEventFunnelValue(value: number): string {
-  return Number.isInteger(value) ? value.toLocaleString() : value.toFixed(1);
+  if (Number.isInteger(value)) {
+    return value.toLocaleString();
+  }
+  const rounded = Math.round(value * 100) / 100;
+  return rounded.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 }
 
 function EventFunnelCards({

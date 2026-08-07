@@ -143,10 +143,24 @@ function roundWhole(value: number): number {
   return Math.round(value);
 }
 
-function roundClients(value: number): number {
-  return Math.round(value * 10) / 10;
-}
-
+/**
+ * Walk the funnel with stage-wise rounding for volume metrics, but keep
+ * clients as the exact product of opportunities × closeRate.
+ *
+ * Example (pre-only, General B2B, webinar, €13,200 budget):
+ *   costPerSignup = 60 × 7 = 420
+ *   signups = floor((13200 - 1250) / 420) = 28
+ *   attendees = round(28 × 0.60) = 17
+ *   reached = round(17 × 0.38) = 6
+ *   opportunities = round(6 × 0.11) = 1
+ *   clients = 1 × 0.18 = 0.18   // do NOT round to 0.2
+ *   revenue = 0.18 × 50000 = 9000
+ *   netReturn = 9000 - 13200 = -4200
+ *   roiPercentage = round((-4200 / 13200) × 100) = -32
+ *
+ * Note: an earlier continuous (unrounded) funnel produced ~−51% ROI;
+ * that figure is inconsistent with the stage-wise expected logic above.
+ */
 function walkFunnelRounded(
   signups: number,
   rates: {
@@ -166,7 +180,7 @@ function walkFunnelRounded(
   const attendees = Math.round(signupsForFunnel * rates.attendanceRate);
   const reached = Math.round(attendees * rates.reachRate);
   const opportunities = Math.round(reached * rates.opportunityRate);
-  const clients = roundClients(opportunities * rates.closeRate);
+  const clients = opportunities * rates.closeRate;
 
   return { signups: signupsForFunnel, attendees, reached, opportunities, clients };
 }
@@ -222,20 +236,6 @@ export function formatEventRoiSummary(results: {
 
 export function isEventLossMaking(netReturn: number): boolean {
   return netReturn < 0;
-}
-
-function logEventCalculationBreakdown(
-  inputs: EventInputs,
-  breakdown: Record<string, unknown>
-): void {
-  if (process.env.NODE_ENV !== "development") {
-    return;
-  }
-
-  console.log("[Event ROI] calculation breakdown", {
-    inputs,
-    ...breakdown,
-  });
 }
 
 /**
@@ -303,7 +303,6 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
 
   /** Step 8 — Headline ROI metrics (net return, multiplier, percentage, break-even). */
   const netReturn = revenue - campaignCost;
-  const roiLabel = getEventRoiLabel(netReturn, campaignCost);
   const roiMultiplier =
     netReturn >= 0 && campaignCost > 0
       ? Math.round((1 + netReturn / campaignCost) * 10) / 10
@@ -315,29 +314,6 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
   /** Step 9 — Sales efficiency metrics. */
   const costPerNewClient = clients > 0 ? campaignCost / clients : 0;
   const revenueMultiple = campaignCost > 0 ? revenue / campaignCost : 0;
-
-  logEventCalculationBreakdown(inputs, {
-    campaignService: inputs.campaignService,
-    funnelRates,
-    setupFee,
-    hourlyRate,
-    costPerSignup,
-    signupsRaw,
-    signups,
-    attendees,
-    reached,
-    opportunities,
-    clients,
-    postEventCost,
-    preEventCost,
-    revenue,
-    grossProfit,
-    netReturn,
-    roiLabel,
-    roiMultiplier,
-    roiPercentage,
-    isBreakEven,
-  });
 
   return {
     signups,

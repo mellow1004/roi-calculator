@@ -91,7 +91,9 @@ function FunnelFlow({
               <p className="font-display mt-0.5 text-lg font-normal tabular-nums text-white">
                 {Number.isInteger(stage.value)
                   ? stage.value.toLocaleString()
-                  : stage.value.toFixed(1)}
+                  : (Math.round(stage.value * 100) / 100).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
               </p>
             </div>
             {index < stages.length - 1 ? (
@@ -419,7 +421,9 @@ export default function StepCampaignDetailsEvent({
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {Number.isInteger(results.clients)
                   ? results.clients.toLocaleString()
-                  : results.clients.toFixed(1)}
+                  : (Math.round(results.clients * 100) / 100).toLocaleString(undefined, {
+                      maximumFractionDigits: 2,
+                    })}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
