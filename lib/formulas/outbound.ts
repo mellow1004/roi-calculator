@@ -13,19 +13,22 @@ export function getCostPerMeetingForCurrency(currency: OutboundInputs["currency"
  * Formula steps:
  * 1) monthlySpend = targetMeetingsPerMonth * costPerMeeting
  * 2) newClientsPerMonth = targetMeetingsPerMonth * (closeRate / 100)
- * 3) cac = monthlySpend / newClientsPerMonth
- * 4) arr = averageMRR * 12
- * 5) ltv = arr * clientLifetimeYears
- * 6) roi = ltv / cac (rounded to 1 decimal place)
- * 7) cashFlowYear1Positive = arr >= cac
+ * 3) For AE as a Service, acquisition cost uses 2× monthly spend
+ * 4) cac = effectiveCost / newClientsPerMonth
+ * 5) arr = averageMRR * 12
+ * 6) ltv = arr * clientLifetimeYears
+ * 7) roi = ltv / cac (rounded to 1 decimal place)
+ * 8) cashFlowYear1Positive = arr >= cac
  */
 export function calculateOutboundResults(
   inputs: OutboundInputs,
-  costPerMeeting = COST_PER_MEETING
+  costPerMeeting = COST_PER_MEETING,
+  isAEService = false
 ): OutboundResults {
   const monthlySpend = inputs.targetMeetingsPerMonth * costPerMeeting;
   const newClientsPerMonth = inputs.targetMeetingsPerMonth * (inputs.closeRate / 100);
-  const cac = newClientsPerMonth > 0 ? monthlySpend / newClientsPerMonth : 0;
+  const effectiveCost = isAEService ? monthlySpend * 2 : monthlySpend;
+  const cac = newClientsPerMonth > 0 ? effectiveCost / newClientsPerMonth : 0;
   const arr = inputs.averageMRR * 12;
   const ltv = arr * inputs.clientLifetimeYears;
   const rawRoi = cac > 0 ? ltv / cac : 0;

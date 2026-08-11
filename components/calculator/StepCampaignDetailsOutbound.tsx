@@ -8,14 +8,16 @@ import {
   calculateOutboundResults,
   getCashFlowWarning,
   getCostPerMeetingForCurrency,
-  getRoiLabel,
-  outboundRoiLabelBadgeClassName,
 } from "@/lib/formulas/outbound";
 import { useCalculator } from "@/lib/calculatorStore";
 import type { Currency, OutboundServiceModel } from "@/types/calculator";
 
 const CURRENCIES: Currency[] = ["EUR", "USD", "GBP", "SEK"];
 const SERVICE_MODELS: OutboundServiceModel[] = ["retainer", "campaign"];
+const SERVICE_MODEL_LABELS: Record<OutboundServiceModel, string> = {
+  retainer: "Monthly retainer",
+  campaign: "One-time campaign",
+};
 const OUTBOUND_SERVICE_IDS = ["sdr-team", "ae-team", "event-lead-gen"] as const;
 const serviceLabels: Record<(typeof OUTBOUND_SERVICE_IDS)[number], string> = {
   "sdr-team": "SDR Team",
@@ -60,8 +62,8 @@ export default function StepCampaignDetailsOutbound({
   );
   const [previousCurrency, setPreviousCurrency] = useState<Currency>(outboundInputs.currency);
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-  const results = calculateOutboundResults(outboundInputs, costPerMeeting);
-  const roiLabel = getRoiLabel(results.roi);
+  const isAEService = selectedServices.includes("ae-team");
+  const results = calculateOutboundResults(outboundInputs, costPerMeeting, isAEService);
   const cashWarning = getCashFlowWarning(
     results.cashFlowYear1Positive,
     results.cac,
@@ -159,13 +161,13 @@ export default function StepCampaignDetailsOutbound({
                     dispatch({ type: "UPDATE_OUTBOUND_INPUTS", payload: { serviceModel: model } });
                   }}
                   className={[
-                    "rounded-full border px-4 py-2 text-sm font-semibold capitalize calculator-interactive",
+                    "rounded-full border px-4 py-2 text-sm font-semibold calculator-interactive",
                     serviceModel === model
                       ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:border-[#9CA3AF]",
                   ].join(" ")}
                 >
-                  {model}
+                  {SERVICE_MODEL_LABELS[model]}
                 </button>
               ))}
             </div>
@@ -336,18 +338,28 @@ export default function StepCampaignDetailsOutbound({
                 </span>
               </dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
-              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                {monthlyBudgetLabel}
-                <InfoTooltipTrigger tooltipKey="MONTHLY_SPEND" iconVariant="dark" className="normal-case" />
-              </dt>
-              <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                {formatCurrency(results.monthlySpend, outboundInputs.currency)}
-              </dd>
+            <div className="border-b border-white/10 pb-3">
+              <div className="flex justify-between gap-4">
+                <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
+                  {monthlyBudgetLabel}
+                  <InfoTooltipTrigger tooltipKey="MONTHLY_SPEND" iconVariant="dark" className="normal-case" />
+                </dt>
+                <dd className="font-display text-2xl font-normal tabular-nums text-white">
+                  {formatCurrency(results.monthlySpend, outboundInputs.currency)}
+                </dd>
+              </div>
+              {isAEService ? (
+                <p
+                  className="mt-1 italic"
+                  style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}
+                >
+                  AE rate: 2× SDR rate applied
+                </p>
+              ) : null}
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                CAC
+                Customer Acquisition Cost (CAC)
                 <InfoTooltipTrigger tooltipKey="CAC" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
@@ -356,39 +368,20 @@ export default function StepCampaignDetailsOutbound({
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                ARR
+                Annual Recurring Revenue (ARR)
                 <InfoTooltipTrigger tooltipKey="ARR" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.arr, outboundInputs.currency)}
               </dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
+            <div className="flex justify-between gap-4 border-b border-white/10 pb-3 last:border-b-0 last:pb-0">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                LTV
+                Lifetime Value (LTV)
                 <InfoTooltipTrigger tooltipKey="LTV" iconVariant="dark" className="normal-case" />
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
                 {formatCurrency(results.ltv, outboundInputs.currency)}
-              </dd>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                ROI
-                <InfoTooltipTrigger tooltipKey="ROI" iconVariant="dark" className="normal-case" />
-              </dt>
-              <dd className="flex flex-wrap items-center gap-2">
-                <span className="font-display text-2xl font-normal tabular-nums text-white">
-                  {results.roi}x
-                </span>
-                <span
-                  className={[
-                    "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                    outboundRoiLabelBadgeClassName(roiLabel),
-                  ].join(" ")}
-                >
-                  {roiLabel}
-                </span>
               </dd>
             </div>
           </dl>
@@ -419,7 +412,7 @@ export default function StepCampaignDetailsOutbound({
           <button
             type="button"
             onClick={() => {
-              const computed = calculateOutboundResults(outboundInputs, costPerMeeting);
+              const computed = calculateOutboundResults(outboundInputs, costPerMeeting, isAEService);
               dispatch({ type: "SET_OUTBOUND_RESULTS", payload: computed });
               dispatch({ type: "SET_STEP", payload: "performance" });
             }}

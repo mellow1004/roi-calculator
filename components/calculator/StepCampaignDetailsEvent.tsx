@@ -9,10 +9,8 @@ import {
   calculateEventResults,
   convertEventAmount,
   eventHoursPerSignup,
-  formatEventRoiSummary,
   getEventHourlyRate,
   getEventMinBudget,
-  isEventLossMaking,
   type CampaignService,
   type EventFormat,
   type EventInputs,
@@ -439,7 +437,7 @@ export default function StepCampaignDetailsEvent({
                 {formatEventCurrency(results.campaignCost, eventInputs.currency)}
               </dd>
             </div>
-            <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
+            <div className="flex justify-between gap-4 pb-1 pt-0">
               <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
                 Net return
                 <InfoTooltipTrigger
@@ -455,20 +453,6 @@ export default function StepCampaignDetailsEvent({
                 ].join(" ")}
               >
                 {formatEventCurrency(results.netReturn, eventInputs.currency)}
-              </dd>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-              <dt className="flex items-center gap-1 text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                ROI
-                <InfoTooltipTrigger tooltipKey="ROI" iconVariant="dark" className="normal-case" />
-              </dt>
-              <dd
-                className={[
-                  "text-right font-display text-xl font-normal tabular-nums",
-                  isEventLossMaking(results.netReturn) ? "text-[#FCA5A5]" : "text-white",
-                ].join(" ")}
-              >
-                {formatEventRoiSummary(results)}
               </dd>
             </div>
           </dl>

@@ -18,8 +18,8 @@ import { EventBenchmarkDisclaimer } from "@/components/calculator/EventBenchmark
 import { LabelWithTooltip } from "@/components/calculator/Tooltip";
 import { useCalculator } from "@/lib/calculatorStore";
 import { getFlowConditions } from "@/lib/flowConditions";
-import { calculateGTMEResults, getGTMERoiLabel } from "@/lib/formulas/gtme";
-import { calculateEventResults, formatEventRoiSummary } from "@/lib/formulas/event";
+import { calculateGTMEResults } from "@/lib/formulas/gtme";
+import { calculateEventResults } from "@/lib/formulas/event";
 import { calculateOutboundResults, getCostPerMeetingForCurrency } from "@/lib/formulas/outbound";
 import { formatCurrency, formatEventCurrency } from "@/lib/formatCurrency";
 import { CLASSIC_OUTBOUND_SERVICE_IDS } from "@/lib/flowConditions";
@@ -28,50 +28,6 @@ const serviceLabels: Record<(typeof CLASSIC_OUTBOUND_SERVICE_IDS)[number], strin
   "sdr-team": "SDR Team",
   "ae-team": "AE Team",
 };
-
-const RING_RADIUS = 78;
-const RING_STROKE = 10;
-const RING_CIRC = 2 * Math.PI * RING_RADIUS;
-
-function RoiRing({ roiPercent }: { roiPercent: number }): React.JSX.Element {
-  const normalized = Math.min(Math.max(roiPercent / 500, 0), 1);
-  const dash = normalized * RING_CIRC;
-  const accent = "var(--color-accent)";
-
-  return (
-    <div className="relative mx-auto flex h-56 w-56 items-center justify-center">
-      <svg
-        className="absolute inset-0 h-full w-full -rotate-90"
-        viewBox="0 0 200 200"
-        aria-hidden="true"
-      >
-        <circle
-          cx="100"
-          cy="100"
-          r={RING_RADIUS}
-          fill="none"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth={RING_STROKE}
-        />
-        <circle
-          cx="100"
-          cy="100"
-          r={RING_RADIUS}
-          fill="none"
-          stroke={accent}
-          strokeWidth={RING_STROKE}
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${RING_CIRC}`}
-        />
-      </svg>
-      <div className="relative z-10 flex flex-col items-center justify-center text-center">
-        <span className="font-display text-[48px] font-normal leading-none tracking-tight text-white">
-          {roiPercent}%
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function rangePctStyle(value: number, min: number, max: number): CSSProperties {
   const pct = max === min ? 0 : ((value - min) / (max - min)) * 100;
@@ -128,7 +84,9 @@ function OutboundConfirmationSummary(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs, outboundResults, selectedServices } = state;
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-  const results = outboundResults ?? calculateOutboundResults(outboundInputs, costPerMeeting);
+  const isAEService = selectedServices.includes("ae-team");
+  const results =
+    outboundResults ?? calculateOutboundResults(outboundInputs, costPerMeeting, isAEService);
   const currency = outboundInputs.currency;
   const yearsWhole = Math.floor(outboundInputs.clientLifetimeYears);
   const monthsTotal = Math.round(outboundInputs.clientLifetimeYears * 12);
@@ -155,10 +113,9 @@ function OutboundConfirmationSummary(): React.JSX.Element {
         monthsTotal === 1 ? "month" : "months"
       }`,
     },
-    { label: "CAC", value: formatCurrency(results.cac, currency) },
-    { label: "ARR", value: formatCurrency(results.arr, currency) },
-    { label: "LTV", value: formatCurrency(results.ltv, currency) },
-    { label: "ROI", value: `${results.roi}x` },
+    { label: "Customer Acquisition Cost (CAC)", value: formatCurrency(results.cac, currency) },
+    { label: "Annual Recurring Revenue (ARR)", value: formatCurrency(results.arr, currency) },
+    { label: "Lifetime Value (LTV)", value: formatCurrency(results.ltv, currency) },
   ];
 
   return (
@@ -205,6 +162,14 @@ function OutboundConfirmationSummary(): React.JSX.Element {
             </div>
           ))}
         </dl>
+        {isAEService ? (
+          <p
+            className="mt-4 italic text-[var(--color-text-secondary)]"
+            style={{ fontSize: "12px" }}
+          >
+            AE rate: 2× SDR rate applied
+          </p>
+        ) : null}
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
@@ -252,10 +217,6 @@ function EventConfirmationSummary(): React.JSX.Element {
       label: "Net return",
       value: formatEventCurrency(results.netReturn, currency),
     },
-    {
-      label: "ROI",
-      value: formatEventRoiSummary(results),
-    },
   ];
 
   return (
@@ -302,6 +263,13 @@ function EventConfirmationSummary(): React.JSX.Element {
         </dl>
       </div>
 
+      <p
+        className="mx-auto max-w-xl text-center italic text-[var(--color-text-secondary)]"
+        style={{ fontSize: "14px", marginTop: "16px" }}
+      >
+        Your full ROI projection will be revealed after you submit your details.
+      </p>
+
       <div className="mx-auto mt-4 max-w-xl">
         <EventBenchmarkDisclaimer />
       </div>
@@ -333,9 +301,6 @@ export default function StepPerformance(): React.JSX.Element {
   const { isOutboundOnly, isEventOnly, hasGTME } = getFlowConditions(selectedServices);
 
   if (hasGTME) {
-    const results = calculateGTMEResults(gtmeInputs);
-    const roiLabel = getGTMERoiLabel(results.roi);
-
     const handleNext = (): void => {
       const sliderSnapshot = {
         expectedLeadVolume: gtmeInputs.expectedLeadVolume,
@@ -360,122 +325,80 @@ export default function StepPerformance(): React.JSX.Element {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10">
-          <div className="flex flex-col gap-8">
-            <SliderRow
-              id="expected-lead-volume"
-              label={<LabelWithTooltip tooltipKey="LEAD_VOLUME">Expected Lead Volume</LabelWithTooltip>}
-              valueDisplay={gtmeInputs.expectedLeadVolume.toLocaleString()}
-              min={10}
-              max={5000}
-              step={10}
-              value={gtmeInputs.expectedLeadVolume}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_GTME_INPUTS", payload: { expectedLeadVolume: v } })
-              }
-            />
+        <div className="mx-auto flex max-w-xl flex-col gap-8">
+          <SliderRow
+            id="expected-lead-volume"
+            label={<LabelWithTooltip tooltipKey="LEAD_VOLUME">Expected Lead Volume</LabelWithTooltip>}
+            valueDisplay={gtmeInputs.expectedLeadVolume.toLocaleString()}
+            min={10}
+            max={5000}
+            step={10}
+            value={gtmeInputs.expectedLeadVolume}
+            onChange={(v) =>
+              dispatch({ type: "UPDATE_GTME_INPUTS", payload: { expectedLeadVolume: v } })
+            }
+          />
 
-            <SliderRow
-              id="lead-to-opp"
-              label={<LabelWithTooltip tooltipKey="LEAD_TO_OPP">Lead → Opportunity Rate</LabelWithTooltip>}
-              valueDisplay={`${gtmeInputs.leadToOpportunityRate}%`}
-              min={1}
-              max={50}
-              step={1}
-              value={gtmeInputs.leadToOpportunityRate}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_GTME_INPUTS", payload: { leadToOpportunityRate: v } })
-              }
-            />
+          <SliderRow
+            id="lead-to-opp"
+            label={<LabelWithTooltip tooltipKey="LEAD_TO_OPP">Lead → Opportunity Rate</LabelWithTooltip>}
+            valueDisplay={`${gtmeInputs.leadToOpportunityRate}%`}
+            min={1}
+            max={50}
+            step={1}
+            value={gtmeInputs.leadToOpportunityRate}
+            onChange={(v) =>
+              dispatch({ type: "UPDATE_GTME_INPUTS", payload: { leadToOpportunityRate: v } })
+            }
+          />
 
-            <SliderRow
-              id="opp-to-customer"
-              label={
-                <LabelWithTooltip tooltipKey="OPP_TO_CUSTOMER">Opportunity → Customer Rate</LabelWithTooltip>
-              }
-              valueDisplay={`${gtmeInputs.opportunityToCustomerRate}%`}
-              min={1}
-              max={80}
-              step={1}
-              value={gtmeInputs.opportunityToCustomerRate}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_GTME_INPUTS", payload: { opportunityToCustomerRate: v } })
-              }
-            />
+          <SliderRow
+            id="opp-to-customer"
+            label={
+              <LabelWithTooltip tooltipKey="OPP_TO_CUSTOMER">Opportunity → Customer Rate</LabelWithTooltip>
+            }
+            valueDisplay={`${gtmeInputs.opportunityToCustomerRate}%`}
+            min={1}
+            max={80}
+            step={1}
+            value={gtmeInputs.opportunityToCustomerRate}
+            onChange={(v) =>
+              dispatch({ type: "UPDATE_GTME_INPUTS", payload: { opportunityToCustomerRate: v } })
+            }
+          />
 
-            <SliderRow
-              id="retention"
-              label={<LabelWithTooltip tooltipKey="RETENTION">Customer Retention Rate</LabelWithTooltip>}
-              valueDisplay={`${gtmeInputs.customerRetentionRate}%`}
-              min={0}
-              max={100}
-              step={1}
-              value={gtmeInputs.customerRetentionRate}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_GTME_INPUTS", payload: { customerRetentionRate: v } })
-              }
-            />
+          <SliderRow
+            id="retention"
+            label={<LabelWithTooltip tooltipKey="RETENTION">Customer Retention Rate</LabelWithTooltip>}
+            valueDisplay={`${gtmeInputs.customerRetentionRate}%`}
+            min={0}
+            max={100}
+            step={1}
+            value={gtmeInputs.customerRetentionRate}
+            onChange={(v) =>
+              dispatch({ type: "UPDATE_GTME_INPUTS", payload: { customerRetentionRate: v } })
+            }
+          />
 
-            <SliderRow
-              id="clv-mult"
-              label={<LabelWithTooltip tooltipKey="CLV_MULTIPLIER">CLV Multiplier</LabelWithTooltip>}
-              valueDisplay={`${gtmeInputs.clvMultiplier}x`}
-              min={1}
-              max={10}
-              step={1}
-              value={gtmeInputs.clvMultiplier}
-              onChange={(v) =>
-                dispatch({ type: "UPDATE_GTME_INPUTS", payload: { clvMultiplier: v } })
-              }
-            />
-          </div>
+          <SliderRow
+            id="clv-mult"
+            label={<LabelWithTooltip tooltipKey="CLV_MULTIPLIER">CLV Multiplier</LabelWithTooltip>}
+            valueDisplay={`${gtmeInputs.clvMultiplier}x`}
+            min={1}
+            max={10}
+            step={1}
+            value={gtmeInputs.clvMultiplier}
+            onChange={(v) =>
+              dispatch({ type: "UPDATE_GTME_INPUTS", payload: { clvMultiplier: v } })
+            }
+          />
 
-          <div className="rounded-2xl bg-[var(--color-text-primary)] p-7 text-white lg:p-8">
-            <h3 className="text-center text-base font-semibold text-white">Projected ROI</h3>
-            <p className="mt-1 text-center text-sm text-white/55">
-              Based on your campaign budget and deal size.
-            </p>
-
-            <div className="mt-6 flex flex-col items-center">
-              <RoiRing roiPercent={results.roi} />
-              <p className="mt-4 text-center text-sm font-semibold text-white/85">{roiLabel}</p>
-            </div>
-
-            <div className="mt-8 grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-lg border border-white/10 bg-[rgba(255,255,255,0.07)] p-4">
-                <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/55">
-                  New Customers
-                </p>
-                <p className="font-display mt-1 text-2xl font-normal tabular-nums text-white">
-                  {results.newCustomers}
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[rgba(255,255,255,0.07)] p-4">
-                <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/55">
-                  Revenue
-                </p>
-                <p className="font-display mt-1 text-2xl font-normal tabular-nums text-white">
-                  {formatCurrency(results.projectedRevenue, gtmeInputs.currency)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[rgba(255,255,255,0.07)] p-4">
-                <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/55">
-                  Cost/Lead
-                </p>
-                <p className="font-display mt-1 text-2xl font-normal tabular-nums text-white">
-                  {formatCurrency(results.costPerLead, gtmeInputs.currency)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[rgba(255,255,255,0.07)] p-4">
-                <p className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/55">
-                  Cost/Acq
-                </p>
-                <p className="font-display mt-1 text-2xl font-normal tabular-nums text-white">
-                  {formatCurrency(results.costPerAcquisition, gtmeInputs.currency)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <p
+            className="text-center italic text-[var(--color-text-secondary)]"
+            style={{ fontSize: "14px", marginTop: "24px" }}
+          >
+            Your full ROI projection will be revealed after you submit your details.
+          </p>
         </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-between">
