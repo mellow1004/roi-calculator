@@ -109,7 +109,8 @@ export default function StepCampaignDetails(): React.JSX.Element {
 
   const saveOutboundResults = (): void => {
     const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-    const isAEService = selectedServices.includes("ae-team");
+    const isAEService =
+      selectedServices.includes("ae-team") && !selectedServices.includes("sdr-team");
     dispatch({
       type: "SET_OUTBOUND_RESULTS",
       payload: calculateOutboundResults(outboundInputs, costPerMeeting, isAEService),

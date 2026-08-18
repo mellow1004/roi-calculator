@@ -84,7 +84,10 @@ function OutboundConfirmationSummary(): React.JSX.Element {
   const { state, dispatch } = useCalculator();
   const { outboundInputs, outboundResults, selectedServices } = state;
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-  const isAEService = selectedServices.includes("ae-team");
+  const isAEService =
+    selectedServices.includes("ae-team") && !selectedServices.includes("sdr-team");
+  const isCombinedSdrAe =
+    selectedServices.includes("ae-team") && selectedServices.includes("sdr-team");
   const results =
     outboundResults ?? calculateOutboundResults(outboundInputs, costPerMeeting, isAEService);
   const currency = outboundInputs.currency;
@@ -113,6 +116,14 @@ function OutboundConfirmationSummary(): React.JSX.Element {
         monthsTotal === 1 ? "month" : "months"
       }`,
     },
+    ...(isAEService
+      ? [
+          {
+            label: "Estimated AE service cost",
+            value: formatCurrency(results.effectiveCost, currency),
+          },
+        ]
+      : []),
     { label: "Customer Acquisition Cost (CAC)", value: formatCurrency(results.cac, currency) },
     { label: "Annual Recurring Revenue (ARR)", value: formatCurrency(results.arr, currency) },
     { label: "Lifetime Value (LTV)", value: formatCurrency(results.ltv, currency) },
@@ -165,9 +176,17 @@ function OutboundConfirmationSummary(): React.JSX.Element {
         {isAEService ? (
           <p
             className="mt-4 italic text-[var(--color-text-secondary)]"
-            style={{ fontSize: "12px" }}
+            style={{ fontSize: "11px" }}
           >
-            AE rate: 2× SDR rate applied
+            Includes full funnel management (2× SDR rate)
+          </p>
+        ) : null}
+        {isCombinedSdrAe ? (
+          <p
+            className="mt-4 italic text-[var(--color-text-secondary)]"
+            style={{ fontSize: "11px" }}
+          >
+            Combined SDR + AE service selected
           </p>
         ) : null}
       </div>

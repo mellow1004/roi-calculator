@@ -2,9 +2,15 @@ import type { OutboundInputs, OutboundResults } from "@/types/calculator";
 import { exchangeRates } from "@/lib/currencyConversion";
 
 const COST_PER_MEETING = 600;
+export const AE_MULTIPLIER = 2;
 
 export function getCostPerMeetingForCurrency(currency: OutboundInputs["currency"]): number {
   return Math.round(COST_PER_MEETING * exchangeRates[currency]);
+}
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
 }
 
 /**
@@ -26,18 +32,22 @@ export function calculateOutboundResults(
   isAEService = false
 ): OutboundResults {
   const monthlySpend = inputs.targetMeetingsPerMonth * costPerMeeting;
-  const newClientsPerMonth = inputs.targetMeetingsPerMonth * (inputs.closeRate / 100);
-  const effectiveCost = isAEService ? monthlySpend * 2 : monthlySpend;
-  const cac = newClientsPerMonth > 0 ? effectiveCost / newClientsPerMonth : 0;
+  const newClientsPerMonth = roundTo(
+    inputs.targetMeetingsPerMonth * (inputs.closeRate / 100),
+    2
+  );
+  const effectiveCost = isAEService ? monthlySpend * AE_MULTIPLIER : monthlySpend;
+  const cac = newClientsPerMonth > 0 ? roundTo(effectiveCost / newClientsPerMonth, 0) : 0;
   const arr = inputs.averageMRR * 12;
   const ltv = arr * inputs.clientLifetimeYears;
   const rawRoi = cac > 0 ? ltv / cac : 0;
-  const roi = Math.round(rawRoi * 10) / 10;
+  const roi = roundTo(rawRoi, 1);
   const cashFlowYear1Positive = arr >= cac;
 
   return {
     newClientsPerMonth,
     monthlySpend,
+    effectiveCost,
     cac,
     arr,
     ltv,

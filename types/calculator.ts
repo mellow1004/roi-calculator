@@ -48,6 +48,7 @@ export interface GTMEInputs {
 export interface OutboundResults {
   newClientsPerMonth: number;
   monthlySpend: number;
+  effectiveCost: number;
   cac: number;
   arr: number;
   ltv: number;

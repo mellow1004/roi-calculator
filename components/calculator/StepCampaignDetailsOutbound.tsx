@@ -62,7 +62,10 @@ export default function StepCampaignDetailsOutbound({
   );
   const [previousCurrency, setPreviousCurrency] = useState<Currency>(outboundInputs.currency);
   const costPerMeeting = getCostPerMeetingForCurrency(outboundInputs.currency);
-  const isAEService = selectedServices.includes("ae-team");
+  const isAEService =
+    selectedServices.includes("ae-team") && !selectedServices.includes("sdr-team");
+  const isCombinedSdrAe =
+    selectedServices.includes("ae-team") && selectedServices.includes("sdr-team");
   const results = calculateOutboundResults(outboundInputs, costPerMeeting, isAEService);
   const cashWarning = getCashFlowWarning(
     results.cashFlowYear1Positive,
@@ -89,8 +92,11 @@ export default function StepCampaignDetailsOutbound({
   };
   const currentMinimum = minimums[serviceModel][outboundInputs.currency];
   const isBelowMinimum = results.monthlySpend < currentMinimum;
-  const monthlyBudgetLabel =
-    serviceModel === "retainer" ? "Estimated monthly retainer" : "Estimated campaign investment";
+  const monthlyBudgetLabel = isAEService
+    ? "Estimated AE service cost"
+    : serviceModel === "retainer"
+      ? "Estimated monthly retainer"
+      : "Estimated campaign investment";
   const modelWarningText =
     serviceModel === "retainer"
       ? `The minimum monthly retainer with Brightvision is ${formatCurrency(
@@ -345,15 +351,32 @@ export default function StepCampaignDetailsOutbound({
                   <InfoTooltipTrigger tooltipKey="MONTHLY_SPEND" iconVariant="dark" className="normal-case" />
                 </dt>
                 <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                  {formatCurrency(results.monthlySpend, outboundInputs.currency)}
+                  {formatCurrency(results.effectiveCost, outboundInputs.currency)}
                 </dd>
               </div>
               {isAEService ? (
                 <p
                   className="mt-1 italic"
-                  style={{ fontSize: "12px", color: "rgba(255,255,255,0.5)" }}
+                  style={{
+                    fontSize: "12px",
+                    color: "rgba(255,255,255,0.5)",
+                    lineHeight: 1.4,
+                  }}
                 >
-                  AE rate: 2× SDR rate applied
+                  AE Team as a Service covers the full sales funnel. Estimated cost is 2× the SDR
+                  service cost ({formatCurrency(results.monthlySpend, outboundInputs.currency)} × 2
+                  = {formatCurrency(results.effectiveCost, outboundInputs.currency)}).
+                </p>
+              ) : isCombinedSdrAe ? (
+                <p
+                  className="mt-1 italic"
+                  style={{
+                    fontSize: "12px",
+                    color: "rgba(255,255,255,0.5)",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Combined SDR + AE service selected
                 </p>
               ) : null}
             </div>

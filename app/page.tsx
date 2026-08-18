@@ -57,7 +57,9 @@ function CalculatorShell(): React.JSX.Element {
       return;
     }
     const costPerMeeting = getCostPerMeetingForCurrency(state.outboundInputs.currency);
-    const isAEService = state.selectedServices.includes("ae-team");
+    const isAEService =
+      state.selectedServices.includes("ae-team") &&
+      !state.selectedServices.includes("sdr-team");
     dispatch({
       type: "SET_OUTBOUND_RESULTS",
       payload: calculateOutboundResults(state.outboundInputs, costPerMeeting, isAEService),
