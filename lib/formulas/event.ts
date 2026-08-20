@@ -129,14 +129,17 @@ export function getEventCostPerSignup(
   return Math.round(getEventHourlyRate(currency) * hoursPerSignup[industryVertical]);
 }
 
-/** Minimum total budget for at least 25 sign-ups (setup fee + 25 × cost per sign-up). */
+/** Minimum sign-ups used to derive the campaign budget floor. */
+export const MIN_SIGNUPS = 10;
+
+/** Minimum total budget for at least MIN_SIGNUPS sign-ups (setup fee + MIN_SIGNUPS × cost per sign-up). */
 export function getEventMinBudget(
   industryVertical: IndustryVertical,
   currency: EventInputs["currency"]
 ): number {
   const setupFee = getEventSetupFee(currency);
   const costPerSignup = getEventCostPerSignup(industryVertical, currency);
-  return Math.round(setupFee + costPerSignup * 25);
+  return Math.round(setupFee + costPerSignup * MIN_SIGNUPS);
 }
 
 function roundWhole(value: number): number {

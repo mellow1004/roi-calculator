@@ -329,7 +329,8 @@ export default function StepCampaignDetailsEvent({
               />
             </div>
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-              Your total investment for this campaign
+              Minimum budget for {industryLabel}:{" "}
+              {formatEventCurrency(minBudget, eventInputs.currency)}
             </p>
           </div>
 
