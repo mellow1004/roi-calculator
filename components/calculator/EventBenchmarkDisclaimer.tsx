@@ -15,8 +15,8 @@ export function EventBenchmarkDisclaimer({
     >
       <span aria-hidden="true">⚠️ </span>
       {compact
-        ? "Projections based on Brightvision campaign benchmarks."
-        : "These are projections, not guarantees. Funnel rates are based on Brightvision benchmarks from past campaigns. Actual results may vary depending on your market, messaging, and audience."}
+        ? "Projections are rounded and based on Brightvision campaign benchmarks."
+        : "These are rounded projections, not guarantees. Funnel rates are based on Brightvision benchmarks from past campaigns. Actual results may vary depending on your market, messaging, and audience."}
     </div>
   );
 }

@@ -161,22 +161,36 @@ function formatEventFunnelValue(value: number): string {
 }
 
 function EventFunnelCards({
+  campaignService,
   signups,
+  bookedMeetings,
   attendees,
+  reached,
   opportunities,
   clients,
 }: {
+  campaignService: EventInputs["campaignService"];
   signups: number;
+  bookedMeetings: number;
   attendees: number;
+  reached: number;
   opportunities: number;
   clients: number;
 }): React.JSX.Element {
-  const stages = [
-    { label: "Sign-ups", value: signups },
-    { label: "Attendees", value: attendees },
-    { label: "Opportunities", value: opportunities },
-    { label: "New Clients", value: clients },
-  ];
+  const stages =
+    campaignService === "post-only"
+      ? [
+          { label: "Booked meetings", value: bookedMeetings },
+          { label: "Reached", value: reached },
+          { label: "Opportunities", value: opportunities },
+          { label: "New Clients", value: clients },
+        ]
+      : [
+          { label: "Sign-ups", value: signups },
+          { label: "Attendees", value: attendees },
+          { label: "Opportunities", value: opportunities },
+          { label: "New Clients", value: clients },
+        ];
 
   return (
     <div className="calculator-card p-6 md:p-8">
@@ -252,15 +266,18 @@ function EventResultsSection({
           >
             {isEventLossMaking(eventResults.netReturn)
               ? formatEventRoiSummary(eventResults)
-              : `${eventResults.roiMultiplier}× return on investment · ${eventResults.roiPercentage}%`}
+              : `${eventResults.roiMultiplier}× return on investment ${eventResults.roiPercentage}%`}
           </p>
         </div>
       ) : null}
 
       <EventMetricTilesGrid eventResults={eventResults} eventCurrency={currency} />
       <EventFunnelCards
+        campaignService={eventInputs.campaignService}
         signups={eventResults.signups}
+        bookedMeetings={eventResults.bookedMeetings}
         attendees={eventResults.attendees}
+        reached={eventResults.reached}
         opportunities={eventResults.opportunities}
         clients={eventResults.clients}
       />

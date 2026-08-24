@@ -216,10 +216,17 @@ function EventConfirmationSummary(): React.JSX.Element {
   const { eventInputs, eventResults } = state;
   const results = eventResults ?? calculateEventResults(eventInputs);
   const currency = eventInputs.currency;
+  const isPostOnly = eventInputs.campaignService === "post-only";
 
   const rows: Array<{ label: string; value: string }> = [
-    { label: "Sign-ups", value: results.signups.toLocaleString() },
-    { label: "Attendees", value: results.attendees.toLocaleString() },
+    {
+      label: isPostOnly ? "Booked meetings" : "Sign-ups",
+      value: (isPostOnly ? results.bookedMeetings : results.signups).toLocaleString(),
+    },
+    {
+      label: isPostOnly ? "Reached" : "Attendees",
+      value: (isPostOnly ? results.reached : results.attendees).toLocaleString(),
+    },
     {
       label: "New clients",
       value: Number.isInteger(results.clients)

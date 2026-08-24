@@ -1,6 +1,6 @@
 export type EventFormat = "webinar" | "physical";
 
-export type CampaignService = "pre-only" | "pre-post";
+export type CampaignService = "pre-only" | "pre-post" | "post-only";
 
 export type IndustryVertical =
   | "general-b2b"
@@ -22,6 +22,7 @@ export interface EventInputs {
 
 export interface EventResults {
   signups: number;
+  bookedMeetings: number;
   attendees: number;
   reached: number;
   opportunities: number;
@@ -63,6 +64,12 @@ const preOnlyOverrides = {
   opportunityRate: 0.11,
   closeRate: 0.18,
   postCallCost: 0,
+};
+
+const postOnlyRates = {
+  reachOutRate: 0.45,
+  opportunityRate: 0.15,
+  closeRate: 0.2,
 };
 
 const industryMultipliers: Record<
@@ -198,6 +205,27 @@ function signupsFromBudget(
   return recruitmentBudget / costPerSignup;
 }
 
+function walkPostOnlyFunnel(
+  bookedMeetingsRaw: number,
+  rates: {
+    reachOutRate: number;
+    opportunityRate: number;
+    closeRate: number;
+  }
+): {
+  bookedMeetings: number;
+  reached: number;
+  opportunities: number;
+  clients: number;
+} {
+  const bookedMeetings = Math.floor(bookedMeetingsRaw);
+  const reached = Math.round(bookedMeetings * rates.reachOutRate);
+  const opportunities = reached * rates.opportunityRate;
+  const clients = opportunities * rates.closeRate;
+
+  return { bookedMeetings, reached, opportunities, clients };
+}
+
 export type EventRoiLabel = "Strong return" | "Good return" | "Break-even" | "Below break-even";
 
 /** Classifies event ROI from net return relative to total campaign cost. */
@@ -234,7 +262,7 @@ export function formatEventRoiSummary(results: {
     return `Break-even · ${results.roiPercentage}%`;
   }
 
-  return `${results.roiMultiplier}× · ${results.roiPercentage}%`;
+  return `${results.roiMultiplier}× ${results.roiPercentage}%`;
 }
 
 export function isEventLossMaking(netReturn: number): boolean {
@@ -258,12 +286,6 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
 
   /** Step 3 — Apply industry multipliers, capping each rate at 100%. */
   const multiplier = industryMultipliers[inputs.industryVertical];
-  const funnelRates = {
-    attendanceRate: Math.min(base.attendanceRate * multiplier.attendance, 1),
-    reachRate: Math.min(base.reachRate * multiplier.reach, 1),
-    opportunityRate: Math.min(base.opportunityRate * multiplier.opportunity, 1),
-    closeRate: Math.min(base.closeRate * multiplier.close, 1),
-  };
 
   /** Step 4 — Convert EUR-based fixed costs and hourly rate to the selected currency. */
   const currencyRate = eventExchangeRates[inputs.currency];
@@ -273,29 +295,63 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
   const costPerSignup = hourlyRate * hoursPerSignup[inputs.industryVertical];
   const campaignCost = inputs.totalBudget;
 
-  let signupsRaw = 0;
+  let signups = 0;
+  let bookedMeetings = 0;
+  let attendees = 0;
+  let reached = 0;
+  let opportunities = 0;
+  let clients = 0;
   let postEventCost = 0;
-  let funnel = walkFunnelRounded(0, funnelRates);
 
-  if (inputs.campaignService === "pre-only") {
-    /** Step 5a — Pre-event only: signups derived from total budget minus setup fee. */
-    signupsRaw = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+  if (inputs.campaignService === "post-only") {
+    /** Step 5c — Post-event only: funnel starts at booked meetings (no attendance stage). */
+    const postOnlyFunnelRates = {
+      reachOutRate: Math.min(postOnlyRates.reachOutRate * multiplier.reach, 1),
+      opportunityRate: Math.min(postOnlyRates.opportunityRate * multiplier.opportunity, 1),
+      closeRate: Math.min(postOnlyRates.closeRate * multiplier.close, 1),
+    };
+    const bookedMeetingsRaw = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+    const postOnlyFunnel = walkPostOnlyFunnel(bookedMeetingsRaw, postOnlyFunnelRates);
+    bookedMeetings = postOnlyFunnel.bookedMeetings;
+    reached = postOnlyFunnel.reached;
+    opportunities = postOnlyFunnel.opportunities;
+    clients = postOnlyFunnel.clients;
     postEventCost = 0;
-    funnel = walkFunnelRounded(signupsRaw, funnelRates);
   } else {
-    /** Step 5b — Pre + post: reserve post-event calling from an estimated funnel walk. */
-    const estimatedSignups = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
-    const estimatedFunnel = walkFunnelRounded(estimatedSignups, funnelRates);
-    const reservedPostEventCost = estimatedFunnel.reached * postCallCost;
-    signupsRaw = signupsFromBudget(
-      inputs.totalBudget - setupFee - reservedPostEventCost,
-      costPerSignup
-    );
-    funnel = walkFunnelRounded(signupsRaw, funnelRates);
-    postEventCost = funnel.reached * postCallCost;
-  }
+    const funnelRates = {
+      attendanceRate: Math.min(base.attendanceRate * multiplier.attendance, 1),
+      reachRate: Math.min(base.reachRate * multiplier.reach, 1),
+      opportunityRate: Math.min(base.opportunityRate * multiplier.opportunity, 1),
+      closeRate: Math.min(base.closeRate * multiplier.close, 1),
+    };
 
-  const { signups, attendees, reached, opportunities, clients } = funnel;
+    let signupsRaw = 0;
+    let funnel = walkFunnelRounded(0, funnelRates);
+
+    if (inputs.campaignService === "pre-only") {
+      /** Step 5a — Pre-event only: signups derived from total budget minus setup fee. */
+      signupsRaw = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+      postEventCost = 0;
+      funnel = walkFunnelRounded(signupsRaw, funnelRates);
+    } else {
+      /** Step 5b — Pre + post: reserve post-event calling from an estimated funnel walk. */
+      const estimatedSignups = signupsFromBudget(inputs.totalBudget - setupFee, costPerSignup);
+      const estimatedFunnel = walkFunnelRounded(estimatedSignups, funnelRates);
+      const reservedPostEventCost = estimatedFunnel.reached * postCallCost;
+      signupsRaw = signupsFromBudget(
+        inputs.totalBudget - setupFee - reservedPostEventCost,
+        costPerSignup
+      );
+      funnel = walkFunnelRounded(signupsRaw, funnelRates);
+      postEventCost = funnel.reached * postCallCost;
+    }
+
+    signups = funnel.signups;
+    attendees = funnel.attendees;
+    reached = funnel.reached;
+    opportunities = funnel.opportunities;
+    clients = funnel.clients;
+  }
 
   /** Step 6 — Pre-event spend is total budget minus post-event calling. */
   const preEventCost = campaignCost - postEventCost;
@@ -320,6 +376,7 @@ export function calculateEventResults(inputs: EventInputs): EventResults {
 
   return {
     signups,
+    bookedMeetings,
     attendees,
     reached,
     opportunities,

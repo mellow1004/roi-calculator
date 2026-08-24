@@ -35,9 +35,78 @@ const INDUSTRY_OPTIONS: Array<{ value: IndustryVertical; label: string }> = [
 ];
 
 const CAMPAIGN_SERVICE_OPTIONS: Array<{ value: CampaignService; label: string }> = [
-  { value: "pre-post", label: "Pre + Post-event" },
   { value: "pre-only", label: "Pre-event only" },
+  { value: "pre-post", label: "Pre + Post-event" },
+  { value: "post-only", label: "Post-event only" },
 ];
+
+function formatEventStageValue(value: number): string {
+  if (Number.isInteger(value)) {
+    return value.toLocaleString();
+  }
+  return (Math.round(value * 100) / 100).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+}
+
+function FunnelFlow({
+  campaignService,
+  signups,
+  bookedMeetings,
+  attendees,
+  reached,
+  opportunities,
+  clients,
+}: {
+  campaignService: CampaignService;
+  signups: number;
+  bookedMeetings: number;
+  attendees: number;
+  reached: number;
+  opportunities: number;
+  clients: number;
+}): React.JSX.Element {
+  const stages =
+    campaignService === "post-only"
+      ? [
+          { label: "Booked meetings", value: bookedMeetings },
+          { label: "Reached", value: reached },
+          { label: "Opportunities", value: opportunities },
+          { label: "New Clients", value: clients },
+        ]
+      : [
+          { label: "Sign-ups", value: signups },
+          { label: "Attendees", value: attendees },
+          { label: "Opportunities", value: opportunities },
+          { label: "New Clients", value: clients },
+        ];
+  return (
+    <div className="mt-8 border-t border-white/10 pt-6">
+      <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white/50">
+        Funnel
+      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-center">
+        {stages.map((stage, index) => (
+          <div key={stage.label} className="flex min-w-0 flex-1 items-center gap-1">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-white/45">
+                {stage.label}
+              </p>
+              <p className="font-display mt-0.5 text-lg font-normal tabular-nums text-white">
+                {formatEventStageValue(stage.value)}
+              </p>
+            </div>
+            {index < stages.length - 1 ? (
+              <span className="shrink-0 px-0.5 text-sm text-white/35" aria-hidden="true">
+                →
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function eventCurrencySymbol(currency: EventInputs["currency"]): string {
   switch (currency) {
@@ -54,56 +123,6 @@ function eventCurrencySymbol(currency: EventInputs["currency"]): string {
     default:
       return "";
   }
-}
-
-function FunnelFlow({
-  signups,
-  attendees,
-  opportunities,
-  clients,
-}: {
-  signups: number;
-  attendees: number;
-  opportunities: number;
-  clients: number;
-}): React.JSX.Element {
-  const stages = [
-    { label: "Sign-ups", value: signups },
-    { label: "Attendees", value: attendees },
-    { label: "Opportunities", value: opportunities },
-    { label: "New Clients", value: clients },
-  ];
-
-  return (
-    <div className="mt-8 border-t border-white/10 pt-6">
-      <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white/50">
-        Funnel
-      </p>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-center">
-        {stages.map((stage, index) => (
-          <div key={stage.label} className="flex min-w-0 flex-1 items-center gap-1">
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-white/45">
-                {stage.label}
-              </p>
-              <p className="font-display mt-0.5 text-lg font-normal tabular-nums text-white">
-                {Number.isInteger(stage.value)
-                  ? stage.value.toLocaleString()
-                  : (Math.round(stage.value * 100) / 100).toLocaleString(undefined, {
-                      maximumFractionDigits: 2,
-                    })}
-              </p>
-            </div>
-            {index < stages.length - 1 ? (
-              <span className="shrink-0 px-0.5 text-sm text-white/35" aria-hidden="true">
-                →
-              </span>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 export default function StepCampaignDetailsEvent({
@@ -126,6 +145,7 @@ export default function StepCampaignDetailsEvent({
     INDUSTRY_OPTIONS.find((opt) => opt.value === eventInputs.industryVertical)?.label ??
     "Your industry";
   const industryHours = eventHoursPerSignup[eventInputs.industryVertical];
+  const isPostOnly = eventInputs.campaignService === "post-only";
 
   const inputClass =
     "w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-[15px] text-[var(--color-text-primary)] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-150 ease-out focus:border-[var(--color-accent)] focus:outline-none focus:ring-[3px] focus:ring-[rgba(26,92,56,0.12)]";
@@ -245,8 +265,9 @@ export default function StepCampaignDetailsEvent({
             <div
               className="mt-3 rounded-lg bg-[var(--color-green-subtle)] px-3.5 py-2.5 text-[13px] leading-snug text-[var(--color-text-primary)]"
             >
-              Cost per sign-up is calculated automatically based on your industry. {industryLabel}{" "}
-              campaigns typically require {industryHours} hours per sign-up at{" "}
+              Cost per {isPostOnly ? "booked meeting" : "sign-up"} is calculated automatically based
+              on your industry. {industryLabel} campaigns typically require {industryHours} hours per{" "}
+              {isPostOnly ? "booked meeting" : "sign-up"} at{" "}
               {formatEventCurrency(hourlyRate, eventInputs.currency)}/hr ={" "}
               {formatEventCurrency(results.costPerSignup, eventInputs.currency)}.
             </div>
@@ -277,7 +298,7 @@ export default function StepCampaignDetailsEvent({
               <InfoTooltipTrigger tooltipKey="CAMPAIGN_SERVICE" className="mt-0.5 shrink-0" />
               <span>
                 Pre + Post-event includes recruitment and post-event calling. Pre-event only covers
-                recruitment.
+                recruitment. Post-event only covers post-event calling on an event you already ran.
               </span>
             </p>
           </div>
@@ -376,7 +397,7 @@ export default function StepCampaignDetailsEvent({
             <div className="border-b border-white/10 pb-3">
               <div className="flex justify-between gap-4">
                 <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                  Cost / sign-up
+                  {isPostOnly ? "Cost / booked meeting" : "Cost / sign-up"}
                 </dt>
                 <dd className="font-display text-2xl font-normal tabular-nums text-white">
                   {formatEventCurrency(results.costPerSignup, eventInputs.currency)}
@@ -389,20 +410,20 @@ export default function StepCampaignDetailsEvent({
             <div className="border-b border-white/10 pb-3">
               <div className="flex justify-between gap-4">
                 <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                  Sign-ups
+                  {isPostOnly ? "Booked meetings" : "Sign-ups"}
                 </dt>
                 <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                  {results.signups.toLocaleString()}
+                  {(isPostOnly ? results.bookedMeetings : results.signups).toLocaleString()}
                 </dd>
               </div>
               <p className="mt-1 text-[11px] text-white/45">Based on your budget</p>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
               <dt className="text-[12px] font-medium uppercase tracking-[0.05em] text-white/60">
-                Attendees
+                {isPostOnly ? "Reached" : "Attendees"}
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                {results.attendees.toLocaleString()}
+                {(isPostOnly ? results.reached : results.attendees).toLocaleString()}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
@@ -410,7 +431,7 @@ export default function StepCampaignDetailsEvent({
                 Opportunities
               </dt>
               <dd className="font-display text-2xl font-normal tabular-nums text-white">
-                {results.opportunities.toLocaleString()}
+                {formatEventStageValue(results.opportunities)}
               </dd>
             </div>
             <div className="flex justify-between gap-4 border-b border-white/10 pb-3">
@@ -463,8 +484,11 @@ export default function StepCampaignDetailsEvent({
           </div>
 
           <FunnelFlow
+            campaignService={eventInputs.campaignService}
             signups={results.signups}
+            bookedMeetings={results.bookedMeetings}
             attendees={results.attendees}
+            reached={results.reached}
             opportunities={results.opportunities}
             clients={results.clients}
           />
