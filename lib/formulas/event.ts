@@ -1,3 +1,5 @@
+import { exchangeRates } from "@/lib/currencyConversion";
+
 export type EventFormat = "webinar" | "physical";
 
 export type CampaignService = "pre-only" | "pre-post" | "post-only";
@@ -101,14 +103,8 @@ export const eventHoursPerSignup = hoursPerSignup;
 
 const HOURLY_RATE_EUR = EVENT_HOURLY_RATE_EUR;
 
-export const eventExchangeRates: Record<EventInputs["currency"], number> = {
-  EUR: 1,
-  USD: 1.08,
-  GBP: 0.86,
-  SEK: 11.5,
-  NOK: 11.8,
-  DKK: 7.45,
-};
+/** Shared Brightvision rates from `/lib/currencyConversion.ts` (single source of truth). */
+export const eventExchangeRates = exchangeRates;
 
 /** Converts a monetary amount between event calculator currencies (EUR base). */
 export function convertEventAmount(
